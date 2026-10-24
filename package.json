@@ -1,0 +1,28 @@
+{
+  "name": "lightlink",
+  "version": "0.1.0",
+  "private": true,
+  "type": "module",
+  "description": "Send a file between two phones using only the screen and the camera. No internet, no Bluetooth, no cables.",
+  "scripts": {
+    "dev": "vite",
+    "build": "tsc --noEmit && vite build",
+    "preview": "vite preview",
+    "test": "vitest run --passWithNoTests",
+    "test:watch": "vitest",
+    "typecheck": "tsc --noEmit",
+    "bench": "tsx scripts/bench.ts"
+  },
+  "license": "MIT",
+  "dependencies": {
+    "jsqr": "^1.4.0",
+    "qrcode-generator": "^2.0.4"
+  },
+  "devDependencies": {
+    "@types/node": "^20.17.0",
+    "tsx": "^4.19.4",
+    "typescript": "^5.8.3",
+    "vite": "^6.3.5",
+    "vitest": "^3.2.4"
+  }
+}
