@@ -4,7 +4,7 @@ Send a file between two phones using only the screen and the camera. The sender 
 
 Status: hackathon build (v0.1.0). Codec in `src/codec/`, PWA in `src/ui/`.
 
-Live: https://ryyansafar.site/lightlink/ (GitHub Pages, deployed by `.github/workflows/pages.yml`). The camera needs HTTPS. Note: the account-level custom domain currently routes `/lightlink/` to the portfolio host, so this URL may 404 until that host forwards it; the build in `dist/` is a plain static site and works from any HTTPS host.
+Live: https://lightlink.vercel.app (static site on Vercel, HTTPS; the camera needs HTTPS). The build in `dist/` is a plain static site and works from any HTTPS host. A GitHub Pages workflow also exists (`.github/workflows/pages.yml`) but the account domain routes project pages to the portfolio host, so use the Vercel link.
 
 ## How it works
 
