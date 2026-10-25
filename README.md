@@ -44,39 +44,43 @@ The home screen has a "Big files" path (send and receive) next to the default Se
 
 ### Measured on one device (Big loopback)
 
-Each profile sends a generated 192 KB payload (three 64 KB generations) through the real tile draw and the real decoder, on one machine, with no camera in between. That makes these numbers a decode-and-draw-limited upper bound; a real camera is slower and was not measured. Chromium 156 (headless) on a Mac, one run per row, 2026-10-25, via `node scripts/measure-big.mjs` after `npm run build` and `npx vite preview --port 4173`. Canvas: 1280x800 safe, 1920x1200 fast, 2560x1600 max. Rate is payload bytes over total time (draw and decode run one after the other here; in real use the sender and receiver run in parallel).
+Each profile sends a generated 192 KB payload (three 64 KB generations) through the real pipeline on one machine, with no camera in between: the sender draws frames in a pool of 4 Web Workers into a buffer ahead of display, a display clock shows one frame every 1/fps seconds, and the receiver hands the newest shown frame to a pool of 4 decode workers (BarcodeDetector inside a worker, or jsQR), dropping the frame when every worker is busy and never queueing. Decoding runs in parallel with drawing. Pixels are exact, so these numbers are an upper bound: a real camera adds blur, perspective, exposure and rolling shutter and was not measured. Chromium 156 (headless) on an 8-core Mac, one run per row, 2026-10-25, via `node scripts/measure-big.mjs` after `npm run build` and `npx vite preview`. Canvas: 1280x800 safe, 1920x1200 fast, 2560x1600 max. Rate is payload bytes over total time, including start-up, so short runs are noisy (the fast and max rows finish in about 5 to 7 s).
 
-| Profile | Decoder | Result | KB/s | Draw ms/frame | Decode ms/frame |
-|---|---|---|---|---|---|
-| Phone to phone (safe), 1 x QR v15, 8 fps | BarcodeDetector | PASS | 7.5 | 11 | 20 |
-| Phone to phone (safe) | jsQR | PASS | 7.8 | 9 | 31 |
-| Laptop to phone (fast), 2 x QR v30, 15 fps | BarcodeDetector | PASS | 11.3 | 59 | 46 |
-| Laptop to phone (fast) | jsQR | PASS | 11.9 | 59 | 118 |
-| Laptop to phone (max), 6 x QR v40, 30 fps | BarcodeDetector | PASS | 17.5 | 267 | 124 |
-| Laptop to phone (max) | jsQR | PASS | 14.1 | 292 | 421 |
+| Profile | Decoder | Result | KB/s | Frames shown per s | Generate ms/frame (per worker) | Decode ms/read | Frames dropped |
+|---|---|---|---|---|---|---|---|
+| Phone to phone (safe), 1 x QR v15, 8 fps | BarcodeDetector (worker) | PASS | 2.6 | 8.0 of 8 | 2 | 17 | 0 |
+| Phone to phone (safe) | jsQR (worker) | PASS | 2.6 | 8.0 of 8 | 2 | 27 | 0 |
+| Laptop to phone (fast), 2 x QR v30, 15 fps | BarcodeDetector (worker) | PASS | 31.0 | 14.9 of 15 | 10 | 37 | 0 |
+| Laptop to phone (fast) | jsQR (worker) | PASS | 30.7 | 14.9 of 15 | 12 | 114 | 0 |
+| Laptop to phone (max), 6 x QR v40, 30 fps | BarcodeDetector (worker) | PASS | 41.5 | 29.4 of 30 | 48 | 404 | 92 |
+| Laptop to phone (max) | jsQR (worker) | PASS | 27.9 | 29.4 of 30 | 66 | 589 | 158 |
 
 Colour mode (experimental, same method, `node scripts/measure-colour.mjs`; pixels are exact here, a real camera adds channel crosstalk that was not tested):
 
-| Profile | Decoder | Result | KB/s |
-|---|---|---|---|
-| safe + colour | BarcodeDetector | PASS | 10.2 |
-| fast + colour | BarcodeDetector | PASS | 17.8 |
-| fast + colour | jsQR | PASS | 9.8 |
+| Profile | Decoder | Result | KB/s | Frames shown per s |
+|---|---|---|---|---|
+| safe + colour | BarcodeDetector (worker) | PASS | 7.8 | 8.0 of 8 |
+| fast + colour | BarcodeDetector (worker) | PASS | 41.7 | 14.5 of 15 |
+| fast + colour | jsQR (worker) | PASS | 28.7 | 14.8 of 15 |
 
-What these numbers say. The fountain code is not the limit. The limit is drawing and reading QR codes in JavaScript: at "max" the sender spends about 270 ms per frame generating six v40 codes, so the 30 fps target is not reached (about 4 frames/s drawn). Frame rates above that need faster QR generation (for example generating tiles in worker threads), which is not built yet.
+Before and after, same machine and payload (the "before" run drew and decoded one frame after the other on the main thread, with no display clock, and is the table this one replaces): fast 11.3 (BarcodeDetector) and 11.9 (jsQR) KB/s became 31.0 and 30.7; max 17.5 and 14.1 became 41.5 and 27.9; colour fast 17.8 and 9.8 became 41.7 and 28.7. The safe profile went from 7.5 and 7.8 to 2.6 on purpose, not because anything got slower: the old loop ran unpaced at about 32 frames per second, far above the 8 fps the safe profile promises a phone camera, while the new loop shows frames at the profile rate. At 8 fps the safe ceiling is 2.6 KB/s (one 424-byte payload per frame, 8 frames a second, divided by the 1.25 fountain budget), and the measurement matches it.
+
+What changed and why it is faster. (1) QR generation was the sender bottleneck: about 118 ms for one v40 code, because the QR library scores all eight mask patterns and builds the code nine times. LightLink now vendors that library with one fixed mask (`src/boost/vendor/qrcode.js`, MIT, change noted in the file header): about 13 ms per v40 code measured in node, 9 times faster, and every profile still decodes (`fastframe.test.ts`). (2) Frames are generated ahead in a pool of 2 to 4 workers (from `navigator.hardwareConcurrency`) into a ring of finished bitmaps, so the main thread only draws a ready bitmap; "max" now shows 29.4 of 30 fps, "fast" 14.9 of 15, "safe" 8.0 of 8. A per-worker cost of 48 to 66 ms for six v40 codes, spread over 4 workers, is why the target rate holds. (3) The receiver decodes in a worker pool and drops frames rather than queueing. At "max" it now drops 92 to 158 shown frames per run because decoding six v40 codes takes 400 to 590 ms per frame per worker with 4 workers; that is the remaining limit, and the fountain code absorbs the drops.
+
+Wasted bytes, measured from the code (`src/boost/profiles.ts`). Text-safe transport costs 14.3% of every QR (6 bytes become 7 characters, see docs/EXPLAIN.md). The frame header and CRC are 21 bytes: 4.7% of a safe frame, 1.4% of fast, 0.8% of max. Net payload per QR character: 81.5% (v15), 84.5% (v30), 85.0% (v40). The sender's fountain budget is 1.25x the chunks of a generation before it moves on, which is why the ceiling divides by 1.25. Error correction stays at level L: with exact pixels it carries the most payload (v40: 2953 characters at L against 2331 at M, 21% less), and the loopback cannot show what a camera needs, so no level was tuned against a camera. Short frames (manifests) are now padded with pseudo-random filler to full length, because BarcodeDetector could not read a mostly empty v40 code, which stalled native decoding (found while building this, fixed in `src/codec/frame.ts` by an optional pad that the default Send path does not use).
 
 ### What size is practical
 
-Using the measured loopback rates above as an optimistic ceiling (about 8 to 18 KB/s) and assuming no losses:
+Using the measured loopback rates above as an optimistic ceiling and assuming no losses (about 2.6 KB/s for safe, 31 KB/s for fast and 41 KB/s for max, taking the lower decoder for fast and the higher for max):
 
-| Size | At 8 KB/s | At 18 KB/s |
-|---|---|---|
-| 1 MB | about 2 min | about 1 min |
-| 10 MB | about 21 min | about 10 min |
-| 50 MB | about 1.8 h | about 49 min |
-| 100 MB | about 3.6 h | about 1.6 h |
+| Size | Safe at 2.6 KB/s | Fast at 31 KB/s | Max at 41 KB/s |
+|---|---|---|---|
+| 1 MB | about 7 min | about 33 s | about 25 s |
+| 10 MB | about 65 min | about 6 min | about 4 min |
+| 50 MB | about 5.4 h | about 28 min | about 21 min |
+| 100 MB | about 10.9 h | about 56 min | about 41 min |
 
-So: up to roughly 10 MB is practical with "fast" or "max" from a laptop screen; 10 to 50 MB works but takes the better part of an hour or more; 100 MB is supported by the design (generations stream through Blobs and IndexedDB, nothing holds the whole file) but is not practical at these rates. The phone-to-phone "safe" profile is for files up to a few MB. The app's pre-flight estimate uses the rate the Big loopback measured on the sending device, and says "unknown" if you have not run it. Real camera rates will be lower than these loopback rates.
+So: up to roughly 10 MB is practical with "fast" or "max" from a laptop screen (a few minutes in the loopback, longer with a real camera); 50 MB takes the better part of an hour; 100 MB is supported by the design (generations stream through Blobs and IndexedDB, nothing holds the whole file) but is a long session. The phone-to-phone "safe" profile is for files up to a few MB at most. In the app, the Big files send screen shows a "60-second budget": once a rate is measured it says the largest file that fits in about a minute and the time for the picked file, and before that it says "unknown until you run the test pattern". The rate comes from the receiver's test pattern (codes read per second, capped by what the sender can show, minus the fountain budget) when the same device ran it, else from the loopback on that device. What a real camera will change: it can read only as many frames as its sensor and exposure allow (a 30 fps camera sees at most 30 frames per second and often fewer in low light), screen glare and moire cost reads, and a hand-held phone moves, so expect real rates well below the loopback column; the numbers above should be quoted as a ceiling, not a promise.
 
 Browser support: BarcodeDetector is used where present (Chromium on desktop and Android). iOS Safari lacks BarcodeDetector, so jsQR is used there, which is the slower column above. In the native column, frames are sent as text-safe characters (see docs/EXPLAIN.md), a 14.3% size cost that both decoders pay.
 
