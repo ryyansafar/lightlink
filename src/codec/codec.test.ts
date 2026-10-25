@@ -224,3 +224,32 @@ describe('progress reporting', () => {
     expect(dec.solvedMask().every(Boolean)).toBe(true);
   });
 });
+
+describe('dense solve retry spacing', () => {
+  it('decodes correctly and costs at most 5 percent more packets than retrying every 2', () => {
+    const size = 500 * 400; // K = 500
+    let spaced = 0;
+    let every2 = 0;
+    const N = 6;
+    for (let s = 0; s < N; s++) {
+      const bytes = rand(size, s + 7000);
+      const a = new Encoder(bytes, META, { chunkSize: 400 });
+      const b = new Encoder(bytes, META, { chunkSize: 400 });
+      const da = new Decoder();
+      const db = new Decoder(() => 2);
+      spaced += run(a, da);
+      every2 += run(b, db);
+      expect(Array.from(da.result()!.bytes)).toEqual(Array.from(bytes));
+    }
+    expect(spaced).toBeLessThanOrEqual(every2 * 1.05);
+  });
+});
+
+describe('sender hint', () => {
+  it('names exact settings to ask the sender for', async () => {
+    const { senderAsk } = await import('../ui/hint');
+    expect(senderAsk(900)).toBe('QR M, 4 fps');
+    expect(senderAsk(500)).toBe('QR S, 4 fps');
+    expect(senderAsk(250)).toBe('QR S, 2 fps');
+  });
+});

@@ -23,25 +23,22 @@ export function flashScreen(go: (to: string) => void): Screen {
   const modules = h('div', { class: 'stat' });
   const fpsSel = h('select', {}, ...[2, 4, 6, 8, 10, 12, 15, 20, 30].map((f) => h('option', { value: String(f) }, `${f} fps`)));
   const sizeSel = h('select', {}, ...Object.keys(SIZES).map((k) => h('option', { value: k }, `QR ${k} (${SIZES[k]} B)`)));
-  const autoBtn = h('button', { class: 'btn small', onclick: () => setAuto(!auto) }, '');
+  const autoBtn = h('button', { class: 'btn small', onclick: reset }, '');
 
   function applyControls() {
     fpsSel.value = String(fps);
     sizeSel.value = sizeKey;
-    fpsSel.disabled = auto;
-    sizeSel.disabled = auto;
-    autoBtn.textContent = auto ? 'Defaults (QR M, 8 fps)' : 'Custom settings';
+    autoBtn.textContent = auto ? 'Recommended: QR M, 8 fps' : 'Reset to recommended (QR M, 8 fps)';
   }
-  function setAuto(v: boolean) {
-    auto = v;
-    if (auto) { fps = 8; sizeKey = 'M'; resetEnc(); }
+  function reset() {
+    auto = true; fps = 8; sizeKey = 'M'; resetEnc();
     applyControls();
   }
   function resetEnc() {
     enc = new Encoder(out!.bytes, out!.meta, { chunkSize: SIZES[sizeKey] });
   }
-  fpsSel.addEventListener('change', () => { fps = Number(fpsSel.value); });
-  sizeSel.addEventListener('change', () => { sizeKey = sizeSel.value; resetEnc(); });
+  fpsSel.addEventListener('change', () => { fps = Number(fpsSel.value); auto = false; applyControls(); });
+  sizeSel.addEventListener('change', () => { sizeKey = sizeSel.value; auto = false; resetEnc(); applyControls(); });
 
   const avail = () => Math.floor(Math.min(window.innerWidth, laptop ? window.innerHeight : window.innerHeight * 0.65) * (window.devicePixelRatio || 1));
   function tick(t: number) {

@@ -68,7 +68,6 @@ export async function sendReceive(
   await sender.click('text=Start');
   await sender.waitForSelector('canvas.qr');
   if (opts.fps || opts.size) {
-    await sender.click('text=Auto: on');
     if (opts.fps) await sender.selectOption('select >> nth=0', String(opts.fps));
     if (opts.size) await sender.selectOption('select >> nth=1', opts.size);
   }

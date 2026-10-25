@@ -1,5 +1,7 @@
 # LightLink demo script (3 minutes)
 
+Not yet tested on a real iPhone or Android camera by the author at the time of writing, run the pre-flight first.
+
 ## Pre-flight checklist (do this 15 minutes before)
 
 - [ ] Both phones: open the LightLink URL once on Wi-Fi. Home screen must show the green "Ready offline" badge. Add to home screen if you like.
@@ -29,8 +31,8 @@
 3. Uncover. It finishes.
 
 **1:50 Laptop sender, bigger file.**
-1. Laptop: Send, choose the 100 to 150 KB file, Laptop mode (QR fills the window), set QR M and 15 fps. Narrate the elapsed time while it runs.
-2. Phone B receives it. Quote the measured rate honestly: this takes tens of seconds, not instant. Say what the screen says.
+1. Laptop: Send, choose the 100 to 150 KB file, Laptop mode (QR fills the window), keep the recommended QR M and 8 fps (do not raise fps for a real camera). Narrate the elapsed time while it runs.
+2. Phone B receives it. The receiver shows elapsed seconds and "N packets of about M needed", so narrate the wait. It takes tens of seconds, not instant; state the rate you actually see on the day.
 
 **2:30 vCard back.**
 1. Phone B: Send, Make contact card, fill name and number, Start.
@@ -40,6 +42,6 @@
 
 ## If something goes wrong
 
-- Receiver stuck near 0 percent with the "Low decode rate" hint: move closer or further so the QR fills the view, brightness up, ask sender for QR L or a lower fps, kill glare.
+- Receiver stuck near 0 percent with the "Low decode rate" hint: move closer or further so the QR fills the view, brightness up, do what the hint says, it names the exact QR size and fps to ask the sender for, kill glare.
 - Camera blocked message: allow the camera for the site in browser settings, tap Try again.
 - Last resort: run the **Loopback self-test** on one phone. It pushes 100 KB through the real QR draw and decode path on one device and shows PASS plus measured throughput. Then play the pre-recorded capture.

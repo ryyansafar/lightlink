@@ -1,6 +1,7 @@
 import { h, topBar, Screen } from './dom';
 import { Receiver } from './receiver';
 import { state } from './state';
+import { lowRateHint } from './hint';
 
 export function scanScreen(go: (to: string) => void): Screen {
   const rx = new Receiver();
@@ -11,7 +12,7 @@ export function scanScreen(go: (to: string) => void): Screen {
   const pct = h('div', { class: 'stat big' }, '0%');
   const fpsEl = h('div', { class: 'stat' }, 'Decoded: 0 fps');
   const msg = h('div', { class: 'stat' }, 'Point the camera at the sender screen.');
-  const hint = h('div', { class: 'hint', hidden: 'true' }, 'Low decode rate. Hold steady, fill the camera view with the QR, turn screen brightness up, or ask the sender to pick a bigger QR or a lower fps.');
+  const hint = h('div', { class: 'hint', hidden: 'true' }, lowRateHint(0));
   const fail = h('div', { class: 'fail', hidden: 'true' });
   const started = performance.now();
   const root = h('div', { class: 'screen scan' }, topBar('Receive', () => go('home')), h('div', { class: 'camwrap' }, video), pct, bar, grid, fpsEl, msg, hint, fail);
@@ -38,6 +39,7 @@ export function scanScreen(go: (to: string) => void): Screen {
   async function loop() {
     if (!alive) return;
     if (!finished && performance.now() - started > 6000 && rx.fps < 2) {
+      hint.textContent = lowRateHint(rx.last.chunkSize);
       hint.hidden = false;
       fpsEl.textContent = `Decoded: ${rx.fps.toFixed(1)} fps | frames ${rx.frames}`;
     }
@@ -56,7 +58,7 @@ export function scanScreen(go: (to: string) => void): Screen {
         (bar.firstChild as HTMLElement).style.width = `${percent}%`;
         fpsEl.textContent = `Decoded: ${rx.fps.toFixed(1)} fps | frames ${rx.frames}`;
         hint.hidden = true;
-        msg.textContent = `${p.received} packets of about ${need} needed | ${p.solved} of ${p.K} chunks solved`;
+        msg.textContent = `${p.received} packets of about ${need} needed | ${p.solved} of ${p.K} chunks solved | ${((performance.now() - started) / 1000).toFixed(0)} s elapsed`;
         drawGrid(rx.decoder.solvedMask(), p.K);
         if (p.done) {
           const r = rx.decoder.result();
