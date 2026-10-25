@@ -1,9 +1,7 @@
-import { Encoder } from '../codec';
+import { Encoder, SIZES } from '../codec';
 import { h, Screen } from './dom';
 import { drawQr } from './qr';
 import { state } from './state';
-
-const SIZES: Record<string, number> = { S: 250, M: 500, L: 900 };
 
 export function flashScreen(go: (to: string) => void): Screen {
   const out = state.outgoing;
@@ -32,7 +30,7 @@ export function flashScreen(go: (to: string) => void): Screen {
     sizeSel.value = sizeKey;
     fpsSel.disabled = auto;
     sizeSel.disabled = auto;
-    autoBtn.textContent = auto ? 'Auto: on' : 'Auto: off';
+    autoBtn.textContent = auto ? 'Defaults (QR M, 8 fps)' : 'Custom settings';
   }
   function setAuto(v: boolean) {
     auto = v;

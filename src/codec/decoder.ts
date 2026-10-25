@@ -3,7 +3,7 @@ import { parse, type Header, type Manifest } from './frame';
 import { sha256, toHex } from './sha256';
 
 type Meta = { name: string; mime: string; size: number };
-type Status = { progress: number; solved: number; K: number; done: boolean; meta?: Meta };
+type Status = { progress: number; solved: number; K: number; done: boolean; received: number; meta?: Meta };
 interface Drop {
   idx: number[];
   data: Uint8Array;
@@ -59,6 +59,11 @@ export class Decoder {
     return this.status();
   }
 
+  /** Which chunks are resolved right now, in chunk order (cells light up in the random order they are peeled). */
+  solvedMask(): boolean[] {
+    return this.chunks.map((c) => c !== null);
+  }
+
   result(): { bytes: Uint8Array; meta: Meta } | null {
     return this.bytes && this.fileMeta ? { bytes: this.bytes, meta: this.fileMeta } : null;
   }
@@ -66,7 +71,7 @@ export class Decoder {
   private status(): Status {
     const K = this.h?.K ?? 0;
     const done = this.bytes !== null;
-    const s: Status = { progress: K ? this.solved / K : 0, solved: this.solved, K, done };
+    const s: Status = { progress: K ? this.solved / K : 0, solved: this.solved, K, done, received: this.seen.size };
     if (this.manifest && this.h) {
       s.meta = this.fileMeta ?? { name: this.manifest.name, mime: this.manifest.mime, size: this.h.fileSize };
     }
@@ -116,7 +121,7 @@ export class Decoder {
     const excess = this.live.length - unknown;
     if (excess < this.nextExcess) return;
     if (this.eliminate()) return;
-    this.nextExcess = excess + 2;
+    this.nextExcess = excess + Math.max(2, Math.ceil(unknown * 0.02));
   }
 
   private eliminate(): boolean {

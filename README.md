@@ -4,7 +4,7 @@ Send a file between two phones using only the screen and the camera. The sender 
 
 Status: hackathon build (v0.1.0). Codec in `src/codec/`, PWA in `src/ui/`, end-to-end tests in `e2e/`.
 
-Live: https://ryyansafar.site/lightlink/ (GitHub Pages, deployed by `.github/workflows/pages.yml`). The camera needs HTTPS. The account-level custom domain may route `/lightlink/` to the portfolio host, so this URL can 404; the build in `dist/` is a plain static site and works from any HTTPS host.
+Live (may 404, see below): https://ryyansafar.site/lightlink/ (GitHub Pages, deployed by `.github/workflows/pages.yml`). The camera needs HTTPS. The account-level custom domain may route `/lightlink/` to the portfolio host, so this URL can 404; the build in `dist/` is a plain static site and works from any HTTPS host.
 
 | Home | Sender | Receiver | Done |
 |---|---|---|---|
@@ -35,7 +35,7 @@ All measured on one MacBook, headless Chromium, driven by Playwright. The "camer
 | 60 KB with the sender covered for 3 s mid-transfer | completes, equal |
 | PDF, PNG, vCard | complete, byte for byte equal, fingerprint equal |
 | 1 MB random file, QR L, 30 fps | 70.9 s (about 14.4 KB/s), equal |
-| Loopback self-test, 100 KB | PASS, 8.2 s (about 12.2 KB/s, 26.7 decoded frames/s) |
+| Loopback self-test, 100 KB | PASS, 8 to 9 s across runs (about 11 to 12 KB/s), headless Chromium on a Mac, synthetic canvas camera, Oct 2026 |
 | Offline after first load | home screen and loopback work with the network switched off |
 
 ## Run it
@@ -71,3 +71,11 @@ Docs: [3-minute demo script](docs/DEMO.md), [how to explain it and judge Q&A](do
 - Buy me a coffee: https://buymeacoffee.com/ryyansafar
 - PayPal: https://www.paypal.com/paypalme/ryyansafar
 - Razorpay: https://razorpay.me/@ryyansafar
+
+## Real-camera status
+
+No transfer has yet been run through a physical phone camera; every number above is from a synthetic canvas camera in headless Chromium. The 1 MB / 14.4 KB/s figure uses QR L at 30 fps and is laptop-to-laptop only. For phones use the defaults (QR M, 8 fps); if the receiver shows the low decode rate hint, ask the sender for QR S and a lower fps. The receiver reads the camera at 800 px wide and switches to 1280 px for dense QR codes or when decoding is slow.
+
+## Prior art
+
+Streaming QR codes with fountain codes is not new: see txqr, qrstream and Cimbar. LightLink's difference is packaging and verification: a zero-install PWA that works offline on both phones, a GF(2) fallback after peeling (measured overhead is in the table), a 4-emoji fingerprint shown on both screens, a loopback self-test, and a Playwright suite that exercises the real QR draw and decode path.

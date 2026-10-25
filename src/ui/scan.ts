@@ -21,7 +21,7 @@ export function scanScreen(go: (to: string) => void): Screen {
   let alive = true;
   let finished = false;
 
-  function drawGrid(solved: number, K: number) {
+  function drawGrid(mask: boolean[], K: number) {
     const ctx = grid.getContext('2d')!;
     const W = grid.width, H = grid.height;
     ctx.clearRect(0, 0, W, H);
@@ -30,7 +30,7 @@ export function scanScreen(go: (to: string) => void): Screen {
     const rows = Math.ceil(K / cols);
     const cw = W / cols, ch = H / rows;
     for (let i = 0; i < K; i++) {
-      ctx.fillStyle = i < solved ? '#3ddc84' : '#2a2f36';
+      ctx.fillStyle = mask[i] ? '#3ddc84' : '#2a2f36';
       ctx.fillRect((i % cols) * cw + 1, Math.floor(i / cols) * ch + 1, cw - 2, ch - 2);
     }
   }
@@ -42,19 +42,22 @@ export function scanScreen(go: (to: string) => void): Screen {
       fpsEl.textContent = `Decoded: ${rx.fps.toFixed(1)} fps | frames ${rx.frames}`;
     }
     if (!rx.scanner.busy && video.videoWidth) {
-      const scale = Math.min(1, 800 / video.videoWidth);
+      // Dense QR (L) or a struggling decoder gets the full camera width; otherwise 800 px keeps it fast.
+      const wide = rx.frameBytes > 700 || (performance.now() - started > 4000 && rx.fps < 2);
+      const scale = Math.min(1, (wide ? 1280 : 800) / video.videoWidth);
       work.width = Math.round(video.videoWidth * scale);
       work.height = Math.round(video.videoHeight * scale);
       wctx.drawImage(video, 0, 0, work.width, work.height);
       const p = await rx.feed(wctx.getImageData(0, 0, work.width, work.height));
       if (p && !finished) {
-        const percent = Math.floor(p.progress * 100);
+        const need = Math.max(1, Math.ceil(p.K * 1.1));
+        const percent = p.done ? 100 : Math.min(99, Math.floor((Math.min(1, p.received / need)) * 100));
         pct.textContent = `${percent}%`;
         (bar.firstChild as HTMLElement).style.width = `${percent}%`;
         fpsEl.textContent = `Decoded: ${rx.fps.toFixed(1)} fps | frames ${rx.frames}`;
         hint.hidden = true;
-        msg.textContent = `${p.solved} of ${p.K} chunks resolved`;
-        drawGrid(p.solved, p.K);
+        msg.textContent = `${p.received} packets of about ${need} needed | ${p.solved} of ${p.K} chunks solved`;
+        drawGrid(rx.decoder.solvedMask(), p.K);
         if (p.done) {
           const r = rx.decoder.result();
           if (r) {

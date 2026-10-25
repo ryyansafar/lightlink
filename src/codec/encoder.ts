@@ -2,7 +2,9 @@ import { droplet } from './prng';
 import { packData, packManifest, type Header, type Manifest } from './frame';
 import { sha256, toHex } from './sha256';
 
-export const DEFAULT_CHUNK = 400;
+/** Chunk bytes per QR size; the app's default is M. */
+export const SIZES: Record<string, number> = { S: 250, M: 500, L: 900 };
+export const DEFAULT_CHUNK = SIZES.M;
 export const MANIFEST_EVERY = 20;
 
 export class Encoder {

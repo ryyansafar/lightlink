@@ -207,3 +207,20 @@ describe('sender restarts mid-transfer', () => {
     expect(Array.from(dec.result()!.bytes)).toEqual(Array.from(bytes));
   });
 });
+
+describe('progress reporting', () => {
+  it('counts received packets and exposes the solved mask', () => {
+    const bytes = new Uint8Array(2000).map((_, i) => (i * 7) & 255);
+    const enc = new Encoder(bytes, { name: 'a', mime: 'x/y' }, { chunkSize: 100 });
+    const dec = new Decoder();
+    let last = dec.push(enc.nextFrame());
+    expect(last.received).toBe(0);
+    for (let i = 0; i < 5; i++) last = dec.push(enc.nextFrame());
+    expect(last.received).toBeGreaterThan(0);
+    const mask = dec.solvedMask();
+    expect(mask.length).toBe(enc.K);
+    expect(mask.filter(Boolean).length).toBe(last.solved);
+    while (!last.done) last = dec.push(enc.nextFrame());
+    expect(dec.solvedMask().every(Boolean)).toBe(true);
+  });
+});

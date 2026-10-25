@@ -1,7 +1,7 @@
 import { Decoder } from '../codec';
 import { QrScanner } from './scanner';
 
-export interface Progress { progress: number; solved: number; K: number; done: boolean }
+export interface Progress { progress: number; solved: number; K: number; done: boolean; received: number }
 
 /** Frame pump: feeds decoded QR payloads into a Decoder and tracks decoded fps. */
 export class Receiver {
@@ -9,7 +9,8 @@ export class Receiver {
   scanner = new QrScanner();
   times: number[] = [];
   frames = 0;
-  last: Progress = { progress: 0, solved: 0, K: 0, done: false };
+  frameBytes = 0;
+  last: Progress = { progress: 0, solved: 0, K: 0, done: false, received: 0 };
 
   async feed(img: ImageData): Promise<Progress | null> {
     const bytes = await this.scanner.decode(img);
@@ -17,6 +18,7 @@ export class Receiver {
     try {
       const p = this.decoder.push(bytes);
       this.frames++;
+      this.frameBytes = bytes.length;
       const now = performance.now();
       this.times.push(now);
       while (this.times.length && now - this.times[0] > 2000) this.times.shift();

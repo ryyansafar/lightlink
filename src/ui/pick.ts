@@ -1,4 +1,4 @@
-import { Encoder, fingerprint } from '../codec';
+import { Encoder, SIZES, fingerprint } from '../codec';
 import { h, fmtSize, topBar, vcard, Screen } from './dom';
 import { state } from './state';
 
@@ -9,7 +9,7 @@ export function pickScreen(go: (to: string) => void): Screen {
 
   async function setOutgoing(bytes: Uint8Array, name: string, mime: string) {
     state.outgoing = { bytes, meta: { name, mime } };
-    const enc = new Encoder(bytes, { name, mime });
+    const enc = new Encoder(bytes, { name, mime }, { chunkSize: SIZES.M });
     const fp = await fingerprint(bytes);
     info.replaceChildren(
       h('div', { class: 'row' }, h('span', {}, 'Name'), h('b', {}, name)),

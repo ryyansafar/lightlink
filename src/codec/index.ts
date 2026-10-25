@@ -1,6 +1,6 @@
 import { sha256 } from './sha256';
 
-export { Encoder } from './encoder';
+export { Encoder, SIZES } from './encoder';
 export { Decoder } from './decoder';
 export { crc32 } from './crc32';
 

@@ -50,11 +50,11 @@ The recipe for who is mixed with whom comes from a seed in each packet, so the r
 2. **Why not just number frames and resend?** There is no back channel. The receiver cannot tell the sender what it missed, since the only link is one-way light.
 3. **Why a fountain code over Reed-Solomon?** LT codes are rateless: the sender just keeps going, and any sufficient subset works, so no fixed redundancy to guess in advance. Reed-Solomon would need a block size and rate chosen up front.
 4. **How much overhead?** Measured average about 1.06x the chunk count at K around 100, asserted under 1.25 in tests. It is higher for very small K.
-5. **How fast is it?** Synthetic desktop numbers: 100 KB loopback in 8.2 s (12.2 KB/s), 1 MB in 70.9 s (14.4 KB/s). Real cameras are not measured yet.
+5. **How fast is it?** Synthetic desktop numbers: 100 KB loopback in 8 to 9 s (about 11 to 12 KB/s), 1 MB in 70.9 s (14.4 KB/s). Real cameras are not measured yet.
 6. **Does it work offline for real?** Yes after one visit: a service worker precaches everything. Our e2e test switches the network off and runs the loopback. The first visit needs internet or a local host.
 7. **How do you know the file is correct?** Per-frame CRC-32, and a 4 emoji fingerprint of the SHA-256 shown on both phones. The e2e tests compare bytes and fingerprints.
 8. **What if the receiver starts late or misses a few seconds?** It just starts collecting. We test covering the sender for 3 seconds mid-transfer.
 9. **What if the sender changes settings mid-way?** We found and fixed a bug here: the decoder used to stay locked to the first transfer. It now follows a new transfer after three valid frames from it.
 10. **Is it secure?** No encryption. It is point-to-point and visible, so treat it like showing the file on a screen. Adding a shared passphrase and authenticated encryption is the obvious next step.
 11. **Why not Bluetooth, AirDrop or Wi-Fi Direct?** Those are not available across platforms from a web page, need pairing or permissions, and are often disabled in secure areas. Screens and cameras are universal and need no radio.
-12. **What would you do with more time?** Measure on real phones and tune chunk size, fps and QR size automatically from the receiver's decode rate (the app has an Auto mode but no feedback loop), add optional encryption, and support multiple files.
+12. **What would you do with more time?** Measure on real phones and tune chunk size, fps and QR size automatically from the receiver's decode rate (the sender has a Defaults button, not an adaptive mode; the receiver only shows a hint), add optional encryption, and support multiple files.
