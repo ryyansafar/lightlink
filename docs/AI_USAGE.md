@@ -11,7 +11,9 @@ LightLink was built during Devin Hacks Kochi (24 to 25 October 2026) by one deve
 - **The author:** chose the idea, set the constraints (software only, works offline, explainable in 30 seconds), tested on the real site and phones, and decided what to ship and what to hold back.
 
 ## Where Devin was used
-**Not used to write or review LightLink.** The Devin cloud account hit an `out_of_quota` billing error (HTTP 403) during the hackathon, so no Devin session, pull request or commit exists in this repository. Nothing here is labelled as Devin's work, because none of it is.
+**Devin CLI (local, SWE-2 model) was used for a documentation review and fix pass on 25 Oct 2026.** It compared the README and the docs with the code and found 8 inconsistencies: the test count, the overhead figure and K value, the frame header layout, stale "no phone test" claims, a missing bench script and file locations. It then applied the fixes itself. The commit "docs: fix 8 inconsistencies found and applied by a Devin CLI review" is that work, and the author reviewed the diff before committing. **Devin was not used to write the codec or the app.**
+
+The Devin cloud account hit an `out_of_quota` billing error (HTTP 403) during the hackathon, so there are no Devin cloud sessions or pull requests in this repository.
 
 Devin was used in the author's other hackathon project, the offline ledger repository `ryyansafar/stillcounts`, before that error: 9 sessions and 5 merged pull requests (hostile-scenario scouts, a chaos test harness, a learning layer, a race game and a browser QA run), with an honest account of what needed human rework in that repository's `docs/devin.md`.
 
