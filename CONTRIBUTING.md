@@ -2,7 +2,7 @@
 
 1. Write the test first, then the code.
 2. Use conventional commits (`feat:`, `fix:`, `test:`, `docs:`, `chore:`), keep them small.
-3. Run `npm test` and `npm run typecheck` before pushing.
+3. Run `npm test`, `npm run typecheck` and (after `npm run build`) `npm run test:e2e` before pushing.
 4. Keep README, version and commands in sync with the code.
 5. Never commit secrets.
 
