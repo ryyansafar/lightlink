@@ -40,3 +40,8 @@ input[type=text], input[type=tel], input[type=email], select { width:100%; backg
 .fail { display:flex; flex-direction:column; gap:12px; background:var(--card); border:1px solid #ff5252; border-radius:14px; padding:16px; font-size:1.1rem; }
 .fail p { margin:0; color:var(--mut); }
 select { min-height:48px; }
+.strip { display:flex; flex-wrap:wrap; gap:2px; } .strip i { width:10px; height:10px; background:#2a2f36; border-radius:2px; }
+.strip i.on, .strip i.active { background:#ffb020; } .strip i.done { background:var(--acc); }
+.bigcanvas { width:100%; background:#fff; border-radius:8px; image-rendering:pixelated; }
+.verdict { font-weight:700; padding:6px 0; } .verdict.pass { color:var(--acc); } .verdict.fail { color:#ff6b6b; }
+pre.info { overflow-x:auto; font-size:.7rem; white-space:pre; }

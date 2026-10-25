@@ -14,6 +14,7 @@ export interface BigManifest {
   sha: string; // sha256 hex of the stored bytes
   name: string;
   mime: string;
+  t?: [number, number, number]; // sender tiling: cols, rows, colour (0/1)
 }
 
 function seal(body: Uint8Array): Uint8Array {

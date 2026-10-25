@@ -29,7 +29,10 @@ export function homeScreen(go: (to: string) => void): Screen {
     badge,
     h('button', { class: 'btn huge', onclick: () => go('send') }, 'Send'),
     h('button', { class: 'btn huge alt', onclick: () => go('receive') }, 'Receive'),
+    h('button', { class: 'btn small', onclick: () => go('bigsend') }, 'Big files: send (laptop to phone)'),
+    h('button', { class: 'btn small', onclick: () => go('bigreceive') }, 'Big files: receive'),
     h('button', { class: 'btn small', onclick: () => go('loopback') }, 'Loopback self-test'),
+    h('button', { class: 'btn small', onclick: () => go('bigloop') }, 'Big loopback (all profiles)'),
     h('p', { class: 'foot' }, h('a', { href: 'https://ryyansafar.site' }, 'ryyansafar.site'), ' | ', h('a', { href: 'https://github.com/ryyansafar/lightlink' }, 'GitHub'))
   );
   return { el, destroy: () => clearInterval(t) };

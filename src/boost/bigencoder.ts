@@ -30,10 +30,11 @@ export class BigEncoder {
   }
   private metaBase: { name: string; mime: string };
 
-  static async create(blob: Blob, meta: BigMeta, opts: { chunkSize: number; genSize?: number; fileId?: number }): Promise<BigEncoder> {
+  static async create(blob: Blob, meta: BigMeta, opts: { chunkSize: number; genSize?: number; fileId?: number; tiling?: [number, number, number] }): Promise<BigEncoder> {
     const genSize = opts.genSize ?? GEN_SIZE;
     const sha = toHex(await hashBlob(blob));
     const e = new BigEncoder(blob, meta, sha, opts.chunkSize, genSize, opts.fileId ?? crypto.getRandomValues(new Uint32Array(1))[0]);
+    if (opts.tiling) e.manifest.t = opts.tiling;
     e.cur = await e.load(0);
     e.prefetch();
     return e;
