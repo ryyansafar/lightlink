@@ -12,7 +12,7 @@ self.addEventListener('activate', (e) => {
 self.addEventListener('fetch', (e) => {
   if (e.request.method !== 'GET') return;
   e.respondWith(
-    caches.match(e.request, { ignoreSearch: true }).then(
+    caches.match(e.request, { ignoreSearch: true, ignoreVary: true }).then(
       (hit) =>
         hit ||
         fetch(e.request).then((res) => {

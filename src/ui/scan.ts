@@ -11,7 +11,10 @@ export function scanScreen(go: (to: string) => void): Screen {
   const pct = h('div', { class: 'stat big' }, '0%');
   const fpsEl = h('div', { class: 'stat' }, 'Decoded: 0 fps');
   const msg = h('div', { class: 'stat' }, 'Point the camera at the sender screen.');
-  const root = h('div', { class: 'screen scan' }, topBar('Receive', () => go('home')), h('div', { class: 'camwrap' }, video), pct, bar, grid, fpsEl, msg);
+  const hint = h('div', { class: 'hint', hidden: 'true' }, 'Low decode rate. Hold steady, fill the camera view with the QR, turn screen brightness up, or ask the sender to pick a bigger QR or a lower fps.');
+  const fail = h('div', { class: 'fail', hidden: 'true' });
+  const started = performance.now();
+  const root = h('div', { class: 'screen scan' }, topBar('Receive', () => go('home')), h('div', { class: 'camwrap' }, video), pct, bar, grid, fpsEl, msg, hint, fail);
   const work = document.createElement('canvas');
   const wctx = work.getContext('2d', { willReadFrequently: true })!;
   let stream: MediaStream | null = null;
@@ -34,6 +37,10 @@ export function scanScreen(go: (to: string) => void): Screen {
 
   async function loop() {
     if (!alive) return;
+    if (!finished && performance.now() - started > 6000 && rx.fps < 2) {
+      hint.hidden = false;
+      fpsEl.textContent = `Decoded: ${rx.fps.toFixed(1)} fps | frames ${rx.frames}`;
+    }
     if (!rx.scanner.busy && video.videoWidth) {
       const scale = Math.min(1, 800 / video.videoWidth);
       work.width = Math.round(video.videoWidth * scale);
@@ -45,6 +52,7 @@ export function scanScreen(go: (to: string) => void): Screen {
         pct.textContent = `${percent}%`;
         (bar.firstChild as HTMLElement).style.width = `${percent}%`;
         fpsEl.textContent = `Decoded: ${rx.fps.toFixed(1)} fps | frames ${rx.frames}`;
+        hint.hidden = true;
         msg.textContent = `${p.solved} of ${p.K} chunks resolved`;
         drawGrid(p.solved, p.K);
         if (p.done) {
@@ -65,13 +73,24 @@ export function scanScreen(go: (to: string) => void): Screen {
 
   (async () => {
     try {
+      if (!navigator.mediaDevices?.getUserMedia) throw new Error('no camera API (needs HTTPS and a browser with camera support)');
       stream = await navigator.mediaDevices.getUserMedia({ video: { facingMode: { ideal: 'environment' }, width: { ideal: 1280 }, height: { ideal: 720 } }, audio: false });
       if (!alive) { stream.getTracks().forEach((t) => t.stop()); return; }
       video.srcObject = stream;
       await video.play();
       void loop();
     } catch (e) {
-      msg.textContent = `Camera unavailable: ${(e as Error).message}. HTTPS and camera permission are required.`;
+      const err = e as Error;
+      const denied = err.name === 'NotAllowedError' || err.name === 'SecurityError';
+      const none = err.name === 'NotFoundError' || err.name === 'OverconstrainedError' || /no camera API/.test(err.message);
+      msg.hidden = true;
+      fail.hidden = false;
+      fail.replaceChildren(
+        h('b', {}, denied ? 'Camera access was blocked.' : none ? 'No camera found.' : 'Camera could not start.'),
+        h('p', {}, denied ? 'Allow the camera for this site in the browser settings, then try again.' : none ? 'Use a device with a rear camera, or run the Loopback self-test to check the codec without one.' : err.message),
+        h('button', { class: 'btn', onclick: () => location.reload() }, 'Try again'),
+        h('button', { class: 'btn small', onclick: () => go('loopback') }, 'Loopback self-test')
+      );
     }
   })();
 

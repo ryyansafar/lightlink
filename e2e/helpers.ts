@@ -74,7 +74,7 @@ export async function sendReceive(
   }
   const t0 = Date.now();
   if (opts.coverMs) {
-    await receiver.waitForFunction(() => /^[1-9]\d?%$/.test(document.querySelector('.stat.big')?.textContent ?? ''), null, { timeout: 60_000 });
+    await receiver.waitForFunction(() => Number(/frames (\d+)/.exec(document.body.innerText)?.[1] ?? 0) >= 20, null, { timeout: 60_000 });
     await receiver.evaluate(() => { (window as any).__covered = true; });
     await receiver.waitForTimeout(opts.coverMs);
     await receiver.evaluate(() => { (window as any).__covered = false; });
