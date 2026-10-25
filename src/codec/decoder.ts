@@ -25,6 +25,7 @@ export class Decoder {
   private fileMeta: Meta | null = null;
   private live: Drop[] = [];
   private nextExcess = 0;
+  private foreign: { id: number; n: number } | null = null;
 
   reset(): void {
     this.h = null;
@@ -37,11 +38,14 @@ export class Decoder {
     this.fileMeta = null;
     this.live = [];
     this.nextExcess = 0;
+    this.foreign = null;
   }
 
   push(frame: Uint8Array): Status {
     const p = this.bytes ? null : parse(frame);
     if (p) {
+      if (this.h && !this.sameXfer(p.h)) this.noteForeign(p.h);
+      else this.foreign = null;
       if (!this.h) this.lock(p.h);
       if (this.h && this.sameXfer(p.h)) {
         if (p.type === 'manifest') this.manifest = p.m;
@@ -67,6 +71,15 @@ export class Decoder {
       s.meta = this.fileMeta ?? { name: this.manifest.name, mime: this.manifest.mime, size: this.h.fileSize };
     }
     return s;
+  }
+
+  /** The sender restarted (new file or new QR size): after a few CRC-valid frames from it, follow it. */
+  private noteForeign(h: Header): void {
+    this.foreign = this.foreign?.id === h.xferId ? { id: h.xferId, n: this.foreign.n + 1 } : { id: h.xferId, n: 1 };
+    if (this.foreign.n >= 3) {
+      this.reset();
+      this.lock(h);
+    }
   }
 
   private lock(h: Header): void {

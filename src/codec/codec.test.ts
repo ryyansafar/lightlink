@@ -186,3 +186,24 @@ describe('overhead', () => {
     expect(avg).toBeLessThan(1.25);
   });
 });
+
+describe('sender restarts mid-transfer', () => {
+  it('follows a new transfer after a few frames from it', () => {
+    const a = new Encoder(rand(5000, 1), META, { chunkSize: 250 });
+    const bytes = rand(7000, 2);
+    const b = new Encoder(bytes, META, { chunkSize: 500 });
+    const dec = new Decoder();
+    for (let i = 0; i < 5; i++) dec.push(a.nextFrame());
+    run(b, dec);
+    expect(Array.from(dec.result()!.bytes)).toEqual(Array.from(bytes));
+  });
+
+  it('a single stray frame from another transfer does not derail the current one', () => {
+    const bytes = rand(6000, 3);
+    const a = new Encoder(bytes, META);
+    const stray = new Encoder(rand(6000, 4), META);
+    const dec = new Decoder();
+    run(a, dec, (f, i) => (i % 7 === 3 ? stray.nextFrame() : f));
+    expect(Array.from(dec.result()!.bytes)).toEqual(Array.from(bytes));
+  });
+});
