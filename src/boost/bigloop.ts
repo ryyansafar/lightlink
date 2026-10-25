@@ -16,7 +16,7 @@ const PAYLOAD = 192 * 1024;
 const GEN = 64 * 1024;
 /** Canvas per profile: a big phone screen for safe, laptop screens for the others. */
 const CANVAS: Record<string, [number, number]> = { safe: [1280, 800], fast: [1920, 1200], max: [2560, 1600] };
-const TIMEOUT_MS = 60000;
+const TIMEOUT_MS = 150000;
 
 function payload(): Uint8Array {
   const b = new Uint8Array(PAYLOAD);
