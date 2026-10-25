@@ -10,8 +10,8 @@ export interface LoopResult { profile: string; decoder: string; ok: boolean; byt
 
 const PAYLOAD = 192 * 1024;
 const GEN = 64 * 1024;
-const W = 1280, H = 800;
-const TIMEOUT_MS = 60000;
+const W = 2560, H = 1600; // a retina laptop screen
+const TIMEOUT_MS = 45000;
 
 function payload(): Uint8Array {
   const b = new Uint8Array(PAYLOAD);

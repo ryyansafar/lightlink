@@ -7,10 +7,11 @@ export function layoutTiles(cols: number, rows: number, W: number, H: number, mo
   const span = modules + quiet * 2;
   const cell = Math.max(1, Math.floor(Math.min(W / cols, H / rows) / span));
   const side = span * cell;
-  const x0 = Math.floor((W - side * cols) / 2);
-  const y0 = Math.floor((H - side * rows) / 2);
   const rects: Rect[] = [];
-  for (let r = 0; r < rows; r++) for (let c = 0; c < cols; c++) rects.push({ x: x0 + c * side, y: y0 + r * side, w: side, h: side });
+  // each tile is centred in its own grid cell, so the receiver's grid crops contain exactly one code
+  for (let r = 0; r < rows; r++)
+    for (let c = 0; c < cols; c++)
+      rects.push({ x: Math.floor(((c + 0.5) * W) / cols - side / 2), y: Math.floor(((r + 0.5) * H) / rows - side / 2), w: side, h: side });
   return { cell, side, rects };
 }
 
