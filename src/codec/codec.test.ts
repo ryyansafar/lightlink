@@ -167,7 +167,7 @@ describe('hostile channel', () => {
 
 describe('overhead', () => {
   it('averages under 1.25 over 200 seeds for K above 50', () => {
-    const size = 100 * 400; // K = 100
+    const size = 100 * 400; // K = 80 at the default 500 byte chunk size
     let total = 0;
     const N = 200;
     for (let s = 0; s < N; s++) {

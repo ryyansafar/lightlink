@@ -1,6 +1,6 @@
 # LightLink demo script (3 minutes)
 
-Not yet tested on a real iPhone or Android camera by the author at the time of writing, run the pre-flight first.
+One real Android-to-Android transfer has worked (an 86 KB PDF on 25 Oct 2026); the iPhone is still untested, so run the pre-flight first anyway.
 
 ## Pre-flight checklist (do this 15 minutes before)
 

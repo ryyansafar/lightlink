@@ -8,7 +8,7 @@
 
 "Every phone has a screen and a camera, and they work in places where nothing else does. That is the channel. A single QR code only holds a couple of kilobytes, so we need a stream of them, and the problem with a stream is that cameras miss frames. If you number the frames and need all of them, one miss means waiting for that frame to come around again.
 
-We use a fountain code. The sender chops the file into chunks and keeps producing packets, each one a mix, an XOR, of a few random chunks. The receiver does not care which packets it gets. After it has seen a little more packets than there are chunks, about 6 percent more in our measurements, it can solve for the whole file. Cover the screen for three seconds and it just carries on.
+We use a fountain code. The sender chops the file into chunks and keeps producing packets, each one a mix, an XOR, of a few random chunks. The receiver does not care which packets it gets. After it has seen a little more packets than there are chunks, about 7 percent more in our measurements, it can solve for the whole file. Cover the screen for three seconds and it just carries on.
 
 Each packet is one QR code. The receiver decodes them with jsQR in a Web Worker so the UI stays smooth, and a grid shows the file filling in. At the end both phones show a 4 emoji fingerprint of the file's SHA-256: if they match, the file is identical.
 
@@ -29,7 +29,7 @@ The recipe for who is mixed with whom comes from a seed in each packet, so the r
 ## Tech stack
 
 - Vite, vanilla TypeScript, no framework. One font (system), dark, large single-purpose screens.
-- Codec in `src/codec/` (500 byte chunks by default, the QR M size): LT fountain code with robust soliton, seeded PRNG, peeling decoder with a GF(2) elimination fallback, CRC-32 per frame, SHA-256 fingerprint rendered as 4 emoji. Tested with vitest (22 tests, including overhead, loss and restart cases).
+- Codec in `src/codec/` (500 byte chunks by default, the QR M size): LT fountain code with robust soliton, seeded PRNG, peeling decoder with a GF(2) elimination fallback, CRC-32 per frame, SHA-256 fingerprint rendered as 4 emoji. Tested with vitest (25 tests, including overhead, loss and restart cases).
 - QR encode: `qrcode-generator`, byte mode, error correction L. QR decode: `jsQR` in a Web Worker, one frame in flight at a time.
 - PWA: service worker with a build-time precache list, so it works in airplane mode after one visit.
 - Tests: vitest for the codec, Playwright e2e that sends real files between two pages through the real QR draw, camera and decode path (the camera is a canvas capture stream). GitHub Actions CI.
@@ -49,7 +49,7 @@ The recipe for who is mixed with whom comes from a seed in each packet, so the r
 1. **How is this different from a QR code?** One QR holds about 2 to 3 KB. We stream many, and the fountain code means missed frames do not matter.
 2. **Why not just number frames and resend?** There is no back channel. The receiver cannot tell the sender what it missed, since the only link is one-way light.
 3. **Why a fountain code over Reed-Solomon?** LT codes are rateless: the sender just keeps going, and any sufficient subset works, so no fixed redundancy to guess in advance. Reed-Solomon would need a block size and rate chosen up front.
-4. **How much overhead?** Measured average about 1.06x the chunk count at K around 100, asserted under 1.25 in tests. It is higher for very small K.
+4. **How much overhead?** Measured average about 1.07x the chunk count at K=80 (default 500 byte chunks), asserted under 1.25 in tests. It is higher for very small K.
 5. **How fast is it?** Synthetic desktop numbers from one MacBook, October 2026: 100 KB loopback in 8 to 9 s across runs (about 11 to 12 KB/s), and a single 1 MB run in 70.9 s (14.4 KB/s). Real cameras are not measured yet.
 6. **Does it work offline for real?** Yes after one visit: a service worker precaches everything. Our e2e test switches the network off and runs the loopback. The first visit needs internet or a local host.
 7. **How do you know the file is correct?** Per-frame CRC-32, and a 4 emoji fingerprint of the SHA-256 shown on both phones. The e2e tests compare bytes and fingerprints.

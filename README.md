@@ -2,7 +2,7 @@
 
 Send a file between two phones using only the screen and the camera. The sender plays an animated stream of QR codes (a fountain code). The receiver points its camera at it. No internet, no Bluetooth, no cables. Works in airplane mode once the app has been opened once and cached.
 
-Status: hackathon build (v0.1.0). Codec in `src/codec/`, PWA in `src/ui/`, end-to-end tests in `e2e/`.
+Status: hackathon build (v0.1.0). Codec in `src/codec/`, service worker and manifest in `public/`, screens in `src/ui/`, end-to-end tests in `e2e/`.
 
 Live: https://lightlink-liart.vercel.app (the camera needs HTTPS; the build in `dist/` is a plain static site and works from any HTTPS host).
 
@@ -17,7 +17,7 @@ More captures (desktop, camera denied, no camera, low decode rate, loopback) are
 1. The sender cuts the file into equal chunks (500 bytes by default, the QR M size; QR S is 250 and QR L is 900).
 2. It then makes an endless stream of packets. Each packet is the XOR of a few randomly chosen chunks, plus a small header (transfer id, chunk count, packet seed, CRC-32). That is a fountain code (an LT code).
 3. Each packet is drawn as one QR code (byte mode, error correction L) and the codes are shown as a video.
-4. The receiver reads QR codes from the camera (jsQR in a Web Worker). It does not matter which packets it misses. Once it has seen slightly more packets than there are chunks (measured average about 1.06x at K around 100), it can solve for every chunk: first by peeling, then by Gaussian elimination over GF(2) for the stubborn last part.
+4. The receiver reads QR codes from the camera (jsQR in a Web Worker). It does not matter which packets it misses. Once it has seen slightly more packets than there are chunks (measured average about 1.07x at K=80), it can solve for every chunk: first by peeling, then by Gaussian elimination over GF(2) for the stubborn last part.
 5. A 4 emoji fingerprint of the SHA-256 of the file is shown on both phones. If they match, the bytes match.
 
 Because any packet is as good as any other, covering the screen for a few seconds, bad focus or a late start only delay the transfer. Nothing needs to be re-sent. If the sender restarts or changes the QR size, the receiver follows the new transfer after a few valid packets.
@@ -28,7 +28,7 @@ All measured on one MacBook, headless Chromium, driven by Playwright, in October
 
 | Test | Result |
 |---|---|
-| Codec unit tests | 22 pass. Overhead about 1.06x at K=100 (the test asserts under 1.25 over 200 seeds) |
+| Codec unit tests | 25 pass. Overhead about 1.07x at K=80 (the test asserts under 1.25 over 200 seeds) |
 | 20 KB random file, 20 fps | single run: 4.2 s, bytes and fingerprint equal |
 | 30 KB, QR size S (250 B chunks), 15 fps | single run: 10.5 s, equal |
 | 30 KB, QR size L (900 B chunks), 15 fps | 5.0 s in one run, 91.8 s in a later run on the same MacBook (cause not isolated; other jobs were running on the machine), equal |
@@ -48,7 +48,6 @@ npm test               # vitest, codec
 npm run build          # typecheck + production build
 npx playwright install chromium
 npm run test:e2e       # run `npm run build` first; serves dist with vite preview
-npm run bench          # codec overhead benchmark
 npm run screenshots    # regenerate docs/screenshots (needs `npx vite preview --port 4173` running)
 ```
 
@@ -75,7 +74,7 @@ Docs: [3-minute demo script](docs/DEMO.md), [how to explain it and judge Q&A](do
 
 ## Real-camera status
 
-No transfer has yet been run through a physical phone camera; every number above is from a synthetic canvas camera in headless Chromium. The 1 MB / 14.4 KB/s figure uses QR L at 30 fps and is laptop-to-laptop only. For phones use the defaults (QR M, 8 fps); if the receiver shows the low decode rate hint, ask the sender for QR S and a lower fps. The receiver reads the camera at 800 px wide and switches to 1280 px for dense QR codes or when decoding is slow.
+One transfer has been run through physical phone cameras: the Android-to-Android 86 KB PDF in the table above (25 Oct 2026). Every other number above is from a synthetic canvas camera in headless Chromium. The 1 MB / 14.4 KB/s figure uses QR L at 30 fps and is laptop-to-laptop only. For phones use the defaults (QR M, 8 fps); if the receiver shows the low decode rate hint, ask the sender for QR S and a lower fps. The receiver reads the camera at 800 px wide and switches to 1280 px for dense QR codes or when decoding is slow.
 
 ## Prior art
 

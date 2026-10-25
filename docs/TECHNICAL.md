@@ -17,10 +17,10 @@ A numbered QR sequence needs every frame. A camera drops frames constantly (blur
 - Every transmitted frame is a "droplet": the XOR of a small random subset of chunks. The subset size follows a robust soliton degree distribution.
 - The subset is derived from a 32-bit seed using a seeded generator (mulberry32), so a frame only carries the seed, not the list of chunks.
 - The decoder is a peeling (belief propagation) decoder: a droplet that covers one unknown chunk reveals it, which simplifies the other droplets. If peeling stalls, a fallback solves the remainder by Gaussian elimination over GF(2), retried less often as the unknown count grows.
-- Droplets can arrive in any order, with duplicates, with gaps, and starting from the middle of the stream. About K plus a few percent of frames are needed (measured overhead about 1.07 times at K=100; the tests assert under 1.25 over 200 seeds).
+- Droplets can arrive in any order, with duplicates, with gaps, and starting from the middle of the stream. About K plus a few percent of frames are needed (measured overhead about 1.07 times at K=80 with the default 500 byte chunks; the tests assert under 1.25 over 200 seeds).
 
 ## Frame format
-Each frame repeats a small header: version, transfer id, K, seed, chunk size, file size and a CRC32 of the frame. Corrupt frames are dropped silently. A manifest frame (file name, MIME type and the SHA-256 of the whole file) is interleaved about every 20th frame. Two transfers with different ids never mix.
+Each frame starts with a one-byte frame type (data or manifest), then transfer id, K, chunk size and file size; a data frame then carries the seed, and every frame ends with a CRC32. Corrupt frames are dropped silently. A manifest frame (file name, MIME type and the SHA-256 of the whole file) is interleaved about every 20th frame. Two transfers with different ids never mix.
 
 ## Integrity
 Per-frame CRC32, and a SHA-256 check of the full file before it is released. The four-emoji fingerprint is derived from the SHA-256, so the two people can confirm by eye that the same file arrived.
