@@ -3,6 +3,7 @@ import { h, fmtSize, topBar, vcard, Screen } from './dom';
 import { state } from './state';
 
 export function pickScreen(go: (to: string) => void): Screen {
+  state.outgoing = undefined;
   const info = h('div', { class: 'info' });
   const start = h('button', { class: 'btn huge', disabled: 'true', onclick: () => go('flash') }, 'Start');
   (start as HTMLButtonElement).disabled = true;
@@ -43,6 +44,9 @@ export function pickScreen(go: (to: string) => void): Screen {
         await setOutgoing(new Uint8Array(await f.arrayBuffer()), f.name, f.type || 'application/octet-stream');
         status.textContent = '';
       } catch (err) {
+        state.outgoing = undefined;
+        info.replaceChildren();
+        (start as HTMLButtonElement).disabled = true;
         status.textContent = `Could not read that file: ${err instanceof Error ? err.message : 'unknown error'}. Try a smaller file.`;
       }
       input.value = '';
