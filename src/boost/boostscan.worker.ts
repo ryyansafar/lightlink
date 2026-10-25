@@ -1,5 +1,6 @@
 import jsQR from 'jsqr';
 import { extractChannel, type Mat3 } from './channels';
+import { decodeText } from './text7';
 import { cropRegions } from './tiling';
 
 export interface ScanRequest {
@@ -23,7 +24,8 @@ self.onmessage = (e: MessageEvent<ScanRequest>) => {
     for (let c = 0; c < (color ? 3 : 1); c++) {
       const img = color ? extractChannel(tile, c, cal) : tile;
       const r = jsQR(img, g.w, g.h, { inversionAttempts: 'dontInvert' });
-      if (r) found.push(new Uint8Array(r.binaryData));
+      const f = r && decodeText(new Uint8Array(r.binaryData));
+      if (f) found.push(f);
     }
   }
   (self as unknown as Worker).postMessage({ id, found }, found.map((f) => f.buffer));

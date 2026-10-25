@@ -1,4 +1,5 @@
 import { extractChannel, type Mat3 } from './channels';
+import { decodeText } from './text7';
 import type { ScanRequest } from './boostscan.worker';
 
 export interface ReadOpts { cols: number; rows: number; color: boolean; cal?: { black: number[]; inv: Mat3 } }
@@ -27,14 +28,11 @@ export async function nativeAvailable(): Promise<boolean> {
   }
 }
 
-/** Bytes of a detected code. rawBytes when the browser offers it, else rawValue as Latin-1 and as UTF-8 (the CRC picks the right one). */
+/** Frame bytes of a detected code. The payload is text-safe (see text7.ts), so rawValue is enough. */
 export function barcodeBytes(b: Barcode): Uint8Array[] {
-  if (b.rawBytes && b.rawBytes.length) return [new Uint8Array(b.rawBytes)];
-  const s = b.rawValue ?? '';
-  const out: Uint8Array[] = [];
-  if ([...s].every((ch) => ch.charCodeAt(0) < 256)) out.push(Uint8Array.from(s, (ch) => ch.charCodeAt(0)));
-  out.push(new TextEncoder().encode(s));
-  return out;
+  const chars = b.rawBytes?.length ? new Uint8Array(b.rawBytes) : Uint8Array.from(b.rawValue ?? '', (ch) => ch.charCodeAt(0) & 0xff);
+  const f = decodeText(chars);
+  return f ? [f] : [];
 }
 
 export class NativeReader implements QrReader {

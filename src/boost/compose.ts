@@ -1,8 +1,8 @@
 import type { BigEncoder } from './bigencoder';
 import { packTest } from './bigframe';
 import { renderTiles, type Matrix } from './channels';
-import { PROFILES, QR_CAPACITY, type Profile } from './profiles';
-import { qrMatrix } from './qrmatrix';
+import { PROFILES, frameBytes, type Profile } from './profiles';
+import { frameMatrix } from './qrmatrix';
 import { layoutTiles, modulesOf } from './tiling';
 
 /** One display frame: cols x rows tiles, each tile one droplet (three droplets in colour mode). */
@@ -11,7 +11,7 @@ export function composeFrame(enc: BigEncoder, p: Profile, color: boolean, W: num
   const tiles: Matrix[][] = [];
   for (let t = 0; t < p.cols * p.rows; t++) {
     const ls: Matrix[] = [];
-    for (let k = 0; k < layers; k++) ls.push(qrMatrix(enc.nextFrame(), p.version));
+    for (let k = 0; k < layers; k++) ls.push(frameMatrix(enc.nextFrame(), p.version));
     tiles.push(ls);
   }
   const L = layoutTiles(p.cols, p.rows, W, H, modulesOf(p.version));
@@ -25,7 +25,7 @@ export function composeTest(p: Profile, color: boolean, W: number, H: number): I
   const tiles: Matrix[][] = [];
   for (let t = 0; t < p.cols * p.rows; t++) {
     const ls: Matrix[] = [];
-    for (let k = 0; k < layers; k++) ls.push(qrMatrix(packTest(idx, t, k, QR_CAPACITY[p.version]), p.version));
+    for (let k = 0; k < layers; k++) ls.push(frameMatrix(packTest(idx, t, k, frameBytes(p)), p.version));
     tiles.push(ls);
   }
   const L = layoutTiles(p.cols, p.rows, W, H, modulesOf(p.version));

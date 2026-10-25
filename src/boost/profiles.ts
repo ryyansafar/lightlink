@@ -1,3 +1,4 @@
+import { maxBytes } from './text7';
 import { modulesOf } from './tiling';
 
 export interface Profile {
@@ -20,7 +21,9 @@ export const PROFILES: Profile[] = [
   { id: 'max', label: 'Laptop to phone (max)', version: 40, fps: 30, cols: 3, rows: 2, note: 'Six QR v40, 30 fps. Needs a big screen and a good camera.' },
 ];
 
-export const chunkSizeOf = (p: Profile) => QR_CAPACITY[p.version] - FRAME_OVERHEAD;
+/** Frame bytes that fit one tile after the text-safe encoding. */
+export const frameBytes = (p: Profile) => maxBytes(QR_CAPACITY[p.version]);
+export const chunkSizeOf = (p: Profile) => frameBytes(p) - FRAME_OVERHEAD;
 export const modulesPerTile = (p: Profile) => modulesOf(p.version);
 
 /** Theoretical payload ceiling in bytes/s if every drawn frame is decoded (about 1.25x fountain overhead). */

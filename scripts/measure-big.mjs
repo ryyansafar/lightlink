@@ -9,7 +9,11 @@ await page.goto(url);
 console.log('BarcodeDetector present:', await page.evaluate(() => 'BarcodeDetector' in window));
 console.log('UA:', await page.evaluate(() => navigator.userAgent));
 await page.click('#bigloop-run');
+const poll = setInterval(async () => {
+  try { console.log('...', await page.textContent('.info')); } catch { /* page closed */ }
+}, 10000);
 await page.waitForFunction(() => window.__bigLoopDone === true, null, { timeout: 25 * 60 * 1000 });
+clearInterval(poll);
 console.log(await page.textContent('#bigloop-table'));
 console.log(JSON.stringify(await page.evaluate(() => window.__bigLoop)));
 await browser.close();

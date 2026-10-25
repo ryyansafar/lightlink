@@ -7,8 +7,9 @@ import { calibrationFrame, extractChannel, fitCalibration, renderTiles, sampleQu
 import { deflate, inflate, maybeCompress, shouldCompress } from './compress';
 import { genCount, genRange, genXferId, joinGenerations, ResumeTracker, splitGenerations } from './generations';
 import { MemoryGenStore } from './genstore';
-import { ceilingBps, chunkSizeOf, PROFILES, QR_CAPACITY, FRAME_OVERHEAD } from './profiles';
-import { qrMatrix } from './qrmatrix';
+import { ceilingBps, chunkSizeOf, frameBytes, PROFILES, QR_CAPACITY, FRAME_OVERHEAD } from './profiles';
+import { decodeText, encodedLen, encodeText, maxBytes } from './text7';
+import { frameMatrix, qrMatrix } from './qrmatrix';
 import { Sha256Stream, hashBlob } from './sha256stream';
 import { sha256, toHex } from '../codec/sha256';
 import { ThroughputEstimator, fmtDuration, preflight, recommendedMax } from './throughput';
@@ -101,8 +102,33 @@ describe('tiling maths', () => {
 
 describe('profiles', () => {
   it('chunk size plus frame overhead equals QR capacity', () => {
-    for (const p of PROFILES) expect(chunkSizeOf(p) + FRAME_OVERHEAD).toBe(QR_CAPACITY[p.version]);
+    for (const p of PROFILES) { expect(chunkSizeOf(p) + FRAME_OVERHEAD).toBe(frameBytes(p)); expect(encodedLen(frameBytes(p))).toBeLessThanOrEqual(QR_CAPACITY[p.version]); expect(encodedLen(frameBytes(p) + 1)).toBeGreaterThan(QR_CAPACITY[p.version]); }
     expect(ceilingBps(PROFILES[2])).toBeGreaterThan(ceilingBps(PROFILES[0]));
+  });
+});
+
+describe('text-safe transport', () => {
+  it('round trips every length, never emits NUL or bytes above 127', () => {
+    for (let n = 0; n < 60; n++) {
+      const b = rnd(n, n + 1);
+      const e = encodeText(b);
+      expect(e.length).toBe(encodedLen(n));
+      expect(e.every((c) => c >= 1 && c <= 127)).toBe(true);
+      expect(decodeText(e)).toEqual(b);
+    }
+    const edge = new Uint8Array([0, 0, 0, 0, 0, 0, 255, 255, 255, 255, 255, 255, 255]);
+    expect(decodeText(encodeText(edge))).toEqual(edge);
+    expect(decodeText(new Uint8Array([0, 1, 2]))).toBeNull();
+    expect(decodeText(new Uint8Array([127, 127, 127, 127, 127, 127, 127]))).toBeNull();
+    expect(maxBytes(2953)).toBe(2531);
+  });
+  it('a full text-safe v30 frame reads back through jsQR', () => {
+    const p = PROFILES[1];
+    const frame = rnd(frameBytes(p), 21);
+    const m = frameMatrix(frame, p.version);
+    const L = layoutTiles(1, 1, 800, 800, m.n);
+    const r = jsQR(renderTiles(800, 800, L, [[m]]), 800, 800, { inversionAttempts: 'dontInvert' });
+    expect(r && decodeText(new Uint8Array(r.binaryData))).toEqual(frame);
   });
 });
 
