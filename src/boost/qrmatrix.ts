@@ -1,12 +1,16 @@
-import qrcode from 'qrcode-generator';
 import type { Matrix } from './channels';
 import { encodeText } from './text7';
+import qrcode from './vendor/qrcode';
 
-/** Binary frame to a fixed-version, error-correction-L, byte-mode QR matrix. Throws if it does not fit. */
-export function qrMatrix(frame: Uint8Array, version: number): Matrix {
+/** Mask pattern used for every boost frame. The penalty search is skipped: it costs about 8x for no readability gain on random data. */
+export const FIXED_MASK = 2;
+
+/** Binary frame to a fixed-version, byte-mode QR matrix at a given error-correction level. Throws if it does not fit. */
+export function qrMatrix(frame: Uint8Array, version: number, ec: 'L' | 'M' | 'Q' | 'H' = 'L', mask = FIXED_MASK): Matrix {
   let s = '';
   for (let i = 0; i < frame.length; i++) s += String.fromCharCode(frame[i]);
-  const qr = qrcode(version as never, 'L');
+  const qr = qrcode(version, ec);
+  if (mask >= 0) qr.setMask(mask);
   qr.addData(s, 'Byte');
   qr.make();
   const n = qr.getModuleCount();
@@ -16,4 +20,4 @@ export function qrMatrix(frame: Uint8Array, version: number): Matrix {
 }
 
 /** A boost frame as a text-safe QR (see text7.ts). */
-export const frameMatrix = (frame: Uint8Array, version: number): Matrix => qrMatrix(encodeText(frame), version);
+export const frameMatrix = (frame: Uint8Array, version: number, ec: 'L' | 'M' | 'Q' | 'H' = 'L', mask = FIXED_MASK): Matrix => qrMatrix(encodeText(frame), version, ec, mask);
