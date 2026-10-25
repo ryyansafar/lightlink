@@ -87,3 +87,7 @@ What is different here is packaging and verification:
 - A loopback self-test that pushes a file through the real draw and decode path on one device.
 - A browser test suite (Playwright) that exercises the real QR draw and decode path, not only the codec.
 - Peeling followed by a GF(2) elimination fallback (measured overhead is in the table above).
+
+## AI usage and Devin
+
+Built by one developer directing AI coding agents; blind model judges chose the idea and reviewed the result. Devin was **not** used on this repository (its cloud account returned a billing `out_of_quota` error), so no commit here is Devin work. Full, honest account: [docs/AI_USAGE.md](docs/AI_USAGE.md).
