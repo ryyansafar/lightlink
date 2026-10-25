@@ -2,8 +2,8 @@ import { h, fmtSize, topBar, Screen } from '../ui/dom';
 import { maybeCompress } from './compress';
 import { genCount } from './generations';
 import { PROFILES, ceilingBps, profileById } from './profiles';
-import { big, savedRate } from './bigstate';
-import { fmtDuration, preflight, recommendedMax } from './throughput';
+import { big, bestRate } from './bigstate';
+import { budgetLine, fmtDuration, preflight, recommendedMax } from './throughput';
 
 export function bigSendScreen(go: (to: string) => void): Screen {
   const info = h('div', { class: 'info' }, 'Choose a file. Files of 100 MB and more are fine: it is sent in 1 MB generations.');
@@ -21,10 +21,13 @@ export function bigSendScreen(go: (to: string) => void): Screen {
     big.color = colorBox.checked;
     const p = profileById(prof.value);
     note.textContent = p.note;
-    if (!big.out) return;
+    if (!big.out) {
+      info.replaceChildren(h('div', {}, 'Choose a file. Files of 100 MB and more are fine: it is sent in 1 MB generations.'),
+        h('div', { class: 'row' }, h('span', {}, '60-second budget'), h('b', {}, budgetLine(bestRate(p.id).bps, null, fmtSize))));
+      return;
+    }
     const size = big.out.blob.size;
-    const dec = savedRate(p.id, 'native') ? 'native' : 'jsqr';
-    const measured = Math.max(savedRate(p.id, 'native'), savedRate(p.id, 'jsqr'));
+    const { bps: measured, source } = bestRate(p.id);
     const layers = big.color ? 3 : 1;
     const est = measured ? preflight(size, measured * layers * 0 + measured) : null;
     const rows = [
@@ -32,9 +35,10 @@ export function bigSendScreen(go: (to: string) => void): Screen {
       h('div', { class: 'row' }, h('span', {}, 'Size'), h('b', {}, fmtSize(big.out.meta.origSize))),
       h('div', { class: 'row' }, h('span', {}, 'To send'), h('b', {}, `${fmtSize(size)}${big.out.meta.compressed ? ' (deflated)' : ''}`)),
       h('div', { class: 'row' }, h('span', {}, 'Generations'), h('b', {}, String(genCount(size)))),
-      h('div', { class: 'row' }, h('span', {}, 'Estimate'), h('b', {}, est ? `${est.text} (loopback, ${dec})` : 'run Big loopback first for a measured rate')),
+      h('div', { class: 'row' }, h('span', {}, 'Estimate'), h('b', {}, est ? `${est.text} (${source})` : 'unknown until you run the test pattern')),
       h('div', { class: 'row' }, h('span', {}, 'Ceiling'), h('b', {}, `${(ceilingBps(p, layers) / 1024).toFixed(0)} KB/s if every frame is decoded`)),
     ];
+    rows.push(h('div', { class: 'row' }, h('span', {}, '60-second budget'), h('b', {}, budgetLine(measured, size, fmtSize))));
     if (measured) rows.push(h('div', { class: 'row' }, h('span', {}, 'Recommended max'), h('b', {}, `${fmtSize(recommendedMax(measured))} in ${fmtDuration(600)}`)));
     info.replaceChildren(...rows);
   }

@@ -16,6 +16,7 @@ export class BigReceiver {
   reads = 0;
   private recent: number[] = [];
   private testSeen = new Map<string, number>();
+  private testHits: number[] = [];
   test: TestReading | null = null;
 
   constructor(store: boolean) {
@@ -45,6 +46,7 @@ export class BigReceiver {
       const tp = parseTest(p);
       if (tp) {
         this.testSeen.set(`${tp.tile}:${tp.layer}`, now);
+        this.testHits.push(now);
         this.test = { profileIdx: tp.profileIdx & 0x7f, color: (tp.profileIdx & 0x80) !== 0, tiles: 0, layers: 0 };
         continue;
       }
@@ -53,6 +55,7 @@ export class BigReceiver {
       this.recent.push(now);
     }
     while (this.recent.length && now - this.recent[0] > 2000) this.recent.shift();
+    while (this.testHits.length && now - this.testHits[0] > 2000) this.testHits.shift();
     for (const [k, t] of this.testSeen) if (now - t > 1500) this.testSeen.delete(k);
     if (this.test) {
       const keys = [...this.testSeen.keys()].map((k) => k.split(':').map(Number));
@@ -65,6 +68,8 @@ export class BigReceiver {
     return s;
   }
 
+  /** Test-pattern codes read per second (every tile and layer counts), over the last 2 s. */
+  get testFps() { return this.testHits.length / 2; }
   get fps() { return this.recent.length / 2; }
   get avgDecodeMs() { return this.reads ? this.decodeMs / this.reads : 0; }
   close() { this.reader?.close(); }

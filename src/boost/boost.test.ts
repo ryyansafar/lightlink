@@ -247,3 +247,15 @@ describe('big transfer end to end (codec level)', () => {
     expect(parseTest(t)).toEqual({ profileIdx: 2, tile: 4, layer: 1 });
   });
 });
+
+import { budgetLine, fitsInSeconds } from './throughput';
+describe('60-second budget', () => {
+  const fmt = (n: number) => `${n} B`;
+  it('says unknown until a rate is measured', () => {
+    expect(budgetLine(0, null, fmt)).toBe('unknown until you run the test pattern');
+  });
+  it('computes the largest file in a minute and the time for a file', () => {
+    expect(fitsInSeconds(10 * 1024)).toBe(614400);
+    expect(budgetLine(10 * 1024, 1024 * 1024, fmt)).toContain('this file: about 102 s'.replace('102 s', '2 min'));
+  });
+});

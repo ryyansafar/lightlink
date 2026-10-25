@@ -2,9 +2,10 @@ import { h, fmtSize, topBar, Screen } from '../ui/dom';
 import { BigReceiver } from './bigreceiver';
 import type { BigDecoder } from './bigdecoder';
 import { fitCalibration, sampleQuadrants } from './channels';
-import { PROFILES, profileById } from './profiles';
-import { big } from './bigstate';
-import { fmtDuration } from './throughput';
+import { PROFILES, chunkSizeOf, profileById } from './profiles';
+import { OVERHEAD } from './bigencoder';
+import { big, saveRate } from './bigstate';
+import { budgetLine, fmtDuration } from './throughput';
 
 export function bigScanScreen(go: (to: string) => void): Screen {
   const video = h('video', { playsinline: 'true', muted: 'true', autoplay: 'true', class: 'cam' });
@@ -49,6 +50,13 @@ export function bigScanScreen(go: (to: string) => void): Screen {
           const want = p2.cols * p2.rows;
           verdict.textContent = t.tiles >= want && (!t.color || t.layers >= 3) ? `I can read this: ${t.tiles}/${want} tiles${t.color ? ', 3 colour layers' : ''} at ${rx.fps.toFixed(1)} reads/s` : `Partly: ${t.tiles}/${want} tiles${t.color ? `, ${t.layers}/3 layers` : ''}. Move closer or pick a lower profile.`;
           verdict.className = t.tiles >= want ? 'verdict pass' : 'verdict fail';
+          if (t.tiles >= want && (!t.color || t.layers >= 3) && rx.testFps > 0) {
+            // What this camera and decoder can sustain: codes read per second, capped by what the sender can show, minus fountain overhead.
+            const shownPerSec = p2.fps * want * (t.color ? 3 : 1);
+            const bps = (Math.min(rx.testFps, shownPerSec) * chunkSizeOf(p2)) / OVERHEAD;
+            saveRate(p2.id, 'camera', bps);
+            verdict.textContent += `. Measured about ${(bps / 1024).toFixed(1)} KB/s: ${budgetLine(bps, null, fmtSize)}.`;
+          }
         } else { verdict.textContent = 'No test pattern seen yet'; verdict.className = 'verdict'; }
       } else {
         const percent = Math.floor(s.progress * 100);

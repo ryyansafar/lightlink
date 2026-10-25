@@ -41,3 +41,13 @@ export function preflight(sizeBytes: number, rateBps: number): { seconds: number
 export function recommendedMax(rateBps: number, budgetSec = 600): number {
   return Math.floor(rateBps * budgetSec);
 }
+
+/** Largest file that fits in `sec` seconds at a measured rate (bytes/s). */
+export const fitsInSeconds = (rateBps: number, sec = 60) => Math.floor(rateBps * sec);
+
+/** One-line readout for the 60-second budget; says plainly when no rate has been measured. */
+export function budgetLine(rateBps: number, fileBytes: number | null, fmtSize: (n: number) => string): string {
+  if (!(rateBps > 0)) return 'unknown until you run the test pattern';
+  const fit = `up to ${fmtSize(fitsInSeconds(rateBps))} fits in about a minute at ${(rateBps / 1024).toFixed(1)} KB/s`;
+  return fileBytes === null ? fit : `${fit}; this file: about ${fmtDuration(fileBytes / rateBps)}`;
+}
