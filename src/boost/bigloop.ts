@@ -37,6 +37,7 @@ export async function runOne(profileIdx: number, reader: PoolReader, color: bool
   const dec = new BigDecoder();
   const [W, H] = CANVAS[p.id];
   const pool = new FramePool(enc, p, color, W, H, true);
+  const r0 = { reads: reader.reads, ms: reader.decodeMsTotal, dropped: reader.dropped };
   const t0 = performance.now();
   const period = 1000 / p.fps;
   let nextShow = t0, shown = 0, finalizing = false, foundN = 0;
@@ -67,7 +68,7 @@ export async function runOne(profileIdx: number, reader: PoolReader, color: bool
   }
   const kbps = ok ? data.length / 1024 / seconds : 0;
   if (ok && !color) saveRate(p.id, reader.name, kbps * 1024);
-  const res: LoopResult = { profile: p.id + (color ? '+colour' : ''), decoder: reader.name, ok, bytes: data.length, seconds, kbps, frames: pool.generated, shownFps: shown / seconds, targetFps: p.fps, genMs: pool.avgGenMs, genWorkers: pool.size, readers: reader.size, reads: reader.reads, dropped: reader.dropped, decodeMs: reader.avgDecodeMs, progress: dec.status().progress, found: foundN };
+  const res: LoopResult = { profile: p.id + (color ? '+colour' : ''), decoder: reader.name, ok, bytes: data.length, seconds, kbps, frames: pool.generated, shownFps: shown / seconds, targetFps: p.fps, genMs: pool.avgGenMs, genWorkers: pool.size, readers: reader.size, reads: reader.reads - r0.reads, dropped: reader.dropped - r0.dropped, decodeMs: reader.reads > r0.reads ? (reader.decodeMsTotal - r0.ms) / (reader.reads - r0.reads) : 0, progress: dec.status().progress, found: foundN };
   pool.close();
   return res;
 }
