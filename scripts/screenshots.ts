@@ -41,7 +41,7 @@ for (const [name, viewport] of Object.entries(sizes)) {
   await shot(n, 'no-camera');
   // low decode rate hint: camera shows a black frame
   const l = await ctx.newPage();
-  await l.addInitScript(`(() => { const c = document.createElement('canvas'); c.width = 640; c.height = 480; c.getContext('2d').fillRect(0,0,640,480); navigator.mediaDevices.getUserMedia = async () => c.captureStream(15); })();`);
+  await l.addInitScript(`(() => { const c = document.createElement('canvas'); c.width = 640; c.height = 480; const x = c.getContext('2d'); let t = 0; setInterval(() => { x.fillStyle = t++ % 2 ? '#111' : '#161616'; x.fillRect(0,0,640,480); }, 50); navigator.mediaDevices.getUserMedia = async () => c.captureStream(15); })();`);
   await l.goto(`${base}/#receive`, { waitUntil: 'domcontentloaded' });
   await l.waitForSelector('.hint:not([hidden])', { timeout: 15000 });
   await shot(l, 'low-rate');

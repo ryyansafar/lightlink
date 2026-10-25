@@ -83,7 +83,7 @@ export function scanScreen(go: (to: string) => void): Screen {
       const err = e as Error;
       const denied = err.name === 'NotAllowedError' || err.name === 'SecurityError';
       const none = err.name === 'NotFoundError' || err.name === 'OverconstrainedError' || /no camera API/.test(err.message);
-      msg.hidden = true;
+      for (const el of [msg, pct, bar, grid, fpsEl, video]) el.hidden = true;
       fail.hidden = false;
       fail.replaceChildren(
         h('b', {}, denied ? 'Camera access was blocked.' : none ? 'No camera found.' : 'Camera could not start.'),
