@@ -92,3 +92,5 @@ What is different here is packaging and verification:
 ## AI usage and Devin
 
 Built by one developer directing AI coding agents; blind model judges chose the idea and reviewed the result. Devin was **not** used on this repository (its cloud account returned a billing `out_of_quota` error), so no commit here is Devin work. Full, honest account: [docs/AI_USAGE.md](docs/AI_USAGE.md).
+
+Technical details: [docs/TECHNICAL.md](docs/TECHNICAL.md)
