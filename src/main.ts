@@ -6,6 +6,11 @@ import { flashScreen } from './ui/flash';
 import { scanScreen } from './ui/scan';
 import { doneScreen } from './ui/done';
 import { loopbackScreen } from './ui/loopback';
+import { bigSendScreen } from './boost/bigsend';
+import { bigFlashScreen } from './boost/bigflash';
+import { bigScanScreen } from './boost/bigscan';
+import { bigDoneScreen } from './boost/bigdone';
+import { bigLoopScreen } from './boost/bigloop';
 
 const app = document.getElementById('app')!;
 let current: Screen | null = null;
@@ -17,6 +22,11 @@ const routes: Record<string, (go: (to: string) => void) => Screen> = {
   receive: scanScreen,
   done: doneScreen,
   loopback: loopbackScreen,
+  bigsend: bigSendScreen,
+  bigflash: bigFlashScreen,
+  bigreceive: bigScanScreen,
+  bigdone: bigDoneScreen,
+  bigloop: bigLoopScreen,
 };
 
 function go(to: string) {
