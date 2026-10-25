@@ -8,6 +8,7 @@ page.on('pageerror', (e) => console.error('pageerror', e.message));
 await page.goto(url);
 console.log('BarcodeDetector present:', await page.evaluate(() => 'BarcodeDetector' in window));
 console.log('UA:', await page.evaluate(() => navigator.userAgent));
+if (process.argv.includes('--colour')) await page.check('input[type=checkbox]');
 await page.click('#bigloop-run');
 const poll = setInterval(async () => {
   try { console.log('...', await page.textContent('.info')); } catch { /* page closed */ }

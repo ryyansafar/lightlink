@@ -10,8 +10,9 @@ export interface LoopResult { profile: string; decoder: string; ok: boolean; byt
 
 const PAYLOAD = 192 * 1024;
 const GEN = 64 * 1024;
-const W = 2560, H = 1600; // a retina laptop screen
-const TIMEOUT_MS = 45000;
+/** Canvas per profile: a big phone screen for safe, laptop screens for the others. */
+const CANVAS: Record<string, [number, number]> = { safe: [1280, 800], fast: [1920, 1200], max: [2560, 1600] };
+const TIMEOUT_MS = 60000;
 
 function payload(): Uint8Array {
   const b = new Uint8Array(PAYLOAD);
@@ -26,6 +27,7 @@ export async function runOne(profileIdx: number, reader: QrReader, color: boolea
   const data = payload();
   const enc = await BigEncoder.create(new Blob([data as BlobPart]), { name: 'loop.bin', mime: 'application/octet-stream', origSize: data.length, compressed: false }, { chunkSize: chunkSizeOf(p), genSize: GEN, tiling: [p.cols, p.rows, color ? 1 : 0] });
   const dec = new BigDecoder();
+  const [W, H] = CANVAS[p.id];
   const t0 = performance.now();
   let frames = 0, drawMs = 0, decodeMs = 0;
   while (!dec.result && performance.now() - t0 < TIMEOUT_MS) {
@@ -89,3 +91,11 @@ export function bigLoopScreen(go: (to: string) => void): Screen {
   const el = h('div', { class: 'screen' }, topBar('Big loopback', () => go('home')), out, h('label', { class: 'sub' }, colorBox, ' Include colour (experimental)'), table, run);
   return { el, destroy: () => { alive = false; } };
 }
+
+// Test hook: lets scripts/measure-big.mjs run a single profile/decoder/colour combination.
+(window as unknown as { __bigRunOne?: unknown }).__bigRunOne = async (profileIdx: number, decoder: 'native' | 'jsqr', color: boolean) => {
+  const r = decoder === 'native' ? new NativeReader() : new JsqrReader();
+  const res = await runOne(profileIdx, r, color, () => {});
+  r.close();
+  return res;
+};

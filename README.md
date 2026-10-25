@@ -38,6 +38,48 @@ All measured on one MacBook, headless Chromium, driven by Playwright. The "camer
 | Loopback self-test, 100 KB | PASS, 8 to 9 s across runs (about 11 to 12 KB/s), headless Chromium on a Mac, synthetic canvas camera, Oct 2026 |
 | Offline after first load | home screen and loopback work with the network switched off |
 
+## Big files
+
+The home screen has a "Big files" path (send and receive) next to the default Send and Receive, which are unchanged. It adds 1 MB generations (flat memory, per-generation and whole-file SHA-256, pause and resume via IndexedDB), deflate for compressible types, selectable profiles with a one-tap test pattern, multi-QR tiling, native BarcodeDetector decoding with a jsQR fallback, an experimental colour mode (three QR layers in R, G, B), a live KB/s and time-remaining readout, and a pre-flight estimate. How it works: [docs/EXPLAIN.md](docs/EXPLAIN.md).
+
+### Measured on one device (Big loopback)
+
+Each profile sends a generated 192 KB payload (three 64 KB generations) through the real tile draw and the real decoder, on one machine, with no camera in between. That makes these numbers a decode-and-draw-limited upper bound; a real camera is slower and was not measured. Chromium 156 (headless) on a Mac, one run per row, 2026-10-25, via `node scripts/measure-big.mjs` after `npm run build` and `npx vite preview --port 4173`. Canvas: 1280x800 safe, 1920x1200 fast, 2560x1600 max. Rate is payload bytes over total time (draw and decode run one after the other here; in real use the sender and receiver run in parallel).
+
+| Profile | Decoder | Result | KB/s | Draw ms/frame | Decode ms/frame |
+|---|---|---|---|---|---|
+| Phone to phone (safe), 1 x QR v15, 8 fps | BarcodeDetector | PASS | 7.5 | 11 | 20 |
+| Phone to phone (safe) | jsQR | PASS | 7.8 | 9 | 31 |
+| Laptop to phone (fast), 2 x QR v30, 15 fps | BarcodeDetector | PASS | 11.3 | 59 | 46 |
+| Laptop to phone (fast) | jsQR | PASS | 11.9 | 59 | 118 |
+| Laptop to phone (max), 6 x QR v40, 30 fps | BarcodeDetector | PASS | 17.5 | 267 | 124 |
+| Laptop to phone (max) | jsQR | PASS | 14.1 | 292 | 421 |
+
+Colour mode (experimental, same method, `node scripts/measure-colour.mjs`; pixels are exact here, a real camera adds channel crosstalk that was not tested):
+
+| Profile | Decoder | Result | KB/s |
+|---|---|---|---|
+| safe + colour | BarcodeDetector | PASS | 10.2 |
+| fast + colour | BarcodeDetector | PASS | 17.8 |
+| fast + colour | jsQR | PASS | 9.8 |
+
+What these numbers say. The fountain code is not the limit. The limit is drawing and reading QR codes in JavaScript: at "max" the sender spends about 270 ms per frame generating six v40 codes, so the 30 fps target is not reached (about 4 frames/s drawn). Frame rates above that need faster QR generation (for example generating tiles in worker threads), which is not built yet.
+
+### What size is practical
+
+Using the measured loopback rates above as an optimistic ceiling (about 8 to 18 KB/s) and assuming no losses:
+
+| Size | At 8 KB/s | At 18 KB/s |
+|---|---|---|
+| 1 MB | about 2 min | about 1 min |
+| 10 MB | about 21 min | about 10 min |
+| 50 MB | about 1.8 h | about 49 min |
+| 100 MB | about 3.6 h | about 1.6 h |
+
+So: up to roughly 10 MB is practical with "fast" or "max" from a laptop screen; 10 to 50 MB works but takes the better part of an hour or more; 100 MB is supported by the design (generations stream through Blobs and IndexedDB, nothing holds the whole file) but is not practical at these rates. The phone-to-phone "safe" profile is for files up to a few MB. The app's pre-flight estimate uses the rate the Big loopback measured on the sending device, and says "unknown" if you have not run it. Real camera rates will be lower than these loopback rates.
+
+Browser support: BarcodeDetector is used where present (Chromium on desktop and Android). iOS Safari lacks BarcodeDetector, so jsQR is used there, which is the slower column above. In the native column, frames are sent as text-safe characters (see docs/EXPLAIN.md), a 14.3% size cost that both decoders pay.
+
 ## Run it
 
 ```
@@ -48,6 +90,7 @@ npm run build          # typecheck + production build
 npx playwright install chromium
 npm run test:e2e       # run `npm run build` first; serves dist with vite preview
 npm run bench          # codec overhead benchmark
+node scripts/measure-big.mjs   # measured table for every Big files profile and decoder (needs `npm run build` and `npx vite preview --port 4173`)
 npm run screenshots    # regenerate docs/screenshots (needs `npx vite preview --port 4173` running)
 ```
 
