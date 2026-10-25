@@ -3,7 +3,7 @@ import { parse, type Header, type Manifest } from './frame';
 import { sha256, toHex } from './sha256';
 
 type Meta = { name: string; mime: string; size: number };
-type Status = { progress: number; solved: number; K: number; done: boolean; received: number; meta?: Meta };
+type Status = { progress: number; solved: number; K: number; done: boolean; received: number; chunkSize: number; meta?: Meta };
 interface Drop {
   idx: number[];
   data: Uint8Array;
@@ -14,7 +14,13 @@ function xorInto(a: Uint8Array, b: Uint8Array): void {
   for (let i = 0; i < a.length; i++) a[i] ^= b[i];
 }
 
+/** Extra packets to wait before the next dense solve attempt: grows with the unknown count. */
+export type RetryStep = (unknown: number) => number;
+export const defaultRetryStep: RetryStep = (unknown) => Math.max(2, Math.ceil(unknown * 0.02));
+
 export class Decoder {
+  constructor(private readonly retryStep: RetryStep = defaultRetryStep) {}
+
   private h: Header | null = null;
   private manifest: Manifest | null = null;
   private chunks: (Uint8Array | null)[] = [];
@@ -71,7 +77,7 @@ export class Decoder {
   private status(): Status {
     const K = this.h?.K ?? 0;
     const done = this.bytes !== null;
-    const s: Status = { progress: K ? this.solved / K : 0, solved: this.solved, K, done, received: this.seen.size };
+    const s: Status = { progress: K ? this.solved / K : 0, solved: this.solved, K, done, received: this.seen.size, chunkSize: this.h?.chunkSize ?? 0 };
     if (this.manifest && this.h) {
       s.meta = this.fileMeta ?? { name: this.manifest.name, mime: this.manifest.mime, size: this.h.fileSize };
     }
@@ -121,7 +127,7 @@ export class Decoder {
     const excess = this.live.length - unknown;
     if (excess < this.nextExcess) return;
     if (this.eliminate()) return;
-    this.nextExcess = excess + Math.max(2, Math.ceil(unknown * 0.02));
+    this.nextExcess = excess + this.retryStep(unknown);
   }
 
   private eliminate(): boolean {

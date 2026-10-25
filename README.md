@@ -4,7 +4,7 @@ Send a file between two phones using only the screen and the camera. The sender 
 
 Status: hackathon build (v0.1.0). Codec in `src/codec/`, PWA in `src/ui/`, end-to-end tests in `e2e/`.
 
-Live (may 404, see below): https://ryyansafar.site/lightlink/ (GitHub Pages, deployed by `.github/workflows/pages.yml`). The camera needs HTTPS. The account-level custom domain may route `/lightlink/` to the portfolio host, so this URL can 404; the build in `dist/` is a plain static site and works from any HTTPS host.
+Live: https://lightlink-liart.vercel.app (the camera needs HTTPS; the build in `dist/` is a plain static site and works from any HTTPS host).
 
 | Home | Sender | Receiver | Done |
 |---|---|---|---|
@@ -14,7 +14,7 @@ More captures (desktop, camera denied, no camera, low decode rate, loopback) are
 
 ## How it works, in plain words
 
-1. The sender cuts the file into equal chunks (500 bytes by default).
+1. The sender cuts the file into equal chunks (500 bytes by default, the QR M size; QR S is 250 and QR L is 900).
 2. It then makes an endless stream of packets. Each packet is the XOR of a few randomly chosen chunks, plus a small header (transfer id, chunk count, packet seed, CRC-32). That is a fountain code (an LT code).
 3. Each packet is drawn as one QR code (byte mode, error correction L) and the codes are shown as a video.
 4. The receiver reads QR codes from the camera (jsQR in a Web Worker). It does not matter which packets it misses. Once it has seen slightly more packets than there are chunks (measured average about 1.06x at K around 100), it can solve for every chunk: first by peeling, then by Gaussian elimination over GF(2) for the stubborn last part.
@@ -24,17 +24,17 @@ Because any packet is as good as any other, covering the screen for a few second
 
 ## Measured numbers
 
-All measured on one MacBook, headless Chromium, driven by Playwright. The "camera" is a canvas capture stream of the sender page, so these are decode-limited upper bounds, not real camera throughput. Real phone-to-phone throughput has not been measured yet.
+All measured on one MacBook, headless Chromium, driven by Playwright, in October 2026. Rows marked "single run" are one run each and vary from run to run, so read them as order of magnitude, not benchmarks. The "camera" is a canvas capture stream of the sender page, so these are decode-limited upper bounds, not real camera throughput. Real phone-to-phone throughput has not been measured yet.
 
 | Test | Result |
 |---|---|
 | Codec unit tests | 22 pass. Overhead about 1.06x at K=100 (the test asserts under 1.25 over 200 seeds) |
-| 20 KB random file, 20 fps | 4.2 s, bytes and fingerprint equal |
-| 30 KB, QR size S (250 B chunks), 15 fps | 10.5 s, equal |
-| 30 KB, QR size L (900 B chunks), 15 fps | 5.0 s, equal |
+| 20 KB random file, 20 fps | single run: 4.2 s, bytes and fingerprint equal |
+| 30 KB, QR size S (250 B chunks), 15 fps | single run: 10.5 s, equal |
+| 30 KB, QR size L (900 B chunks), 15 fps | 5.0 s in one run, 91.8 s in a later run on the same MacBook (cause not isolated; other jobs were running on the machine), equal |
 | 60 KB with the sender covered for 3 s mid-transfer | completes, equal |
 | PDF, PNG, vCard | complete, byte for byte equal, fingerprint equal |
-| 1 MB random file, QR L, 30 fps | 70.9 s (about 14.4 KB/s), equal |
+| 1 MB random file, QR L, 30 fps | single run: 70.9 s (about 14.4 KB/s), equal |
 | Loopback self-test, 100 KB | PASS, 8 to 9 s across runs (about 11 to 12 KB/s), headless Chromium on a Mac, synthetic canvas camera, Oct 2026 |
 | Offline after first load | home screen and loopback work with the network switched off |
 
@@ -125,4 +125,12 @@ No transfer has yet been run through a physical phone camera; every number above
 
 ## Prior art
 
-Streaming QR codes with fountain codes is not new: see txqr, qrstream and Cimbar. LightLink's difference is packaging and verification: a zero-install PWA that works offline on both phones, a GF(2) fallback after peeling (measured overhead is in the table), a 4-emoji fingerprint shown on both screens, a loopback self-test, and a Playwright suite that exercises the real QR draw and decode path.
+Streaming a file as animated QR codes is not new, and neither are fountain codes. Existing projects include txqr, qrstream, Decimen Optical (animated QR with fountain coding) and Cimbar (a colour-barcode project that reaches much higher throughput). LightLink does not claim the technique.
+
+What is different here is packaging and verification:
+
+- Zero install: a web page that works offline on any phone after one visit.
+- A 4-emoji fingerprint of the file's SHA-256, shown on both screens.
+- A loopback self-test that pushes a file through the real draw and decode path on one device.
+- A browser test suite (Playwright) that exercises the real QR draw and decode path, not only the codec.
+- Peeling followed by a GF(2) elimination fallback (measured overhead is in the table above).
