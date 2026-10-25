@@ -7,7 +7,7 @@ LightLink was built during Devin Hacks Kochi (24 to 25 October 2026) by one deve
 
 - **Idea selection:** several model-written ideas per hackathon track were scored by blind model judges (three judges, shuffled, track labels removed). LightLink won that round. The author made the final call.
 - **Code:** the fountain-code codec, the web app screens, the service worker, the tests and the documentation were written by AI coding agents under the author's direction and review.
-- **Review:** further model judges (Fable and Opus class models) scored the project blind. Their findings (for example: the progress bar looked broken, the Auto toggle did nothing, no real-camera test) drove fixes that are in the git history.
+- **Review:** further model judges scored the project blind. Their findings (for example: the progress bar looked broken, the Auto toggle did nothing, no real-camera test) drove fixes that are in the git history.
 - **The author:** chose the idea, set the constraints (software only, works offline, explainable in 30 seconds), tested on the real site and phones, and decided what to ship and what to hold back.
 
 ## Where Devin was used
