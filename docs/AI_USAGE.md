@@ -18,7 +18,7 @@ Devin was used in the author's other hackathon project, the offline ledger repos
 If Devin sessions become available after this was written, they will be listed here with their pull request links.
 
 ## Things not claimed
-- No real-phone-camera throughput has been measured; the numbers in the README are from a synthetic camera in a browser test.
+- Real phone-camera throughput has not been measured precisely: one real phone-to-phone transfer (86 KB PDF, about two minutes) succeeded, but the speed table comes from a synthetic camera in a browser test.
 - The technique (animated QR fountain codes) is not new; see the Prior art section of the README.
 
 ## Links

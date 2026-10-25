@@ -24,7 +24,7 @@ Because any packet is as good as any other, covering the screen for a few second
 
 ## Measured numbers
 
-All measured on one MacBook, headless Chromium, driven by Playwright, in October 2026. Rows marked "single run" are one run each and vary from run to run, so read them as order of magnitude, not benchmarks. The "camera" is a canvas capture stream of the sender page, so these are decode-limited upper bounds, not real camera throughput. Real phone-to-phone throughput has not been measured yet.
+All measured on one MacBook, headless Chromium, driven by Playwright, in October 2026. Rows marked "single run" are one run each and vary from run to run, so read them as order of magnitude, not benchmarks. The "camera" is a canvas capture stream of the sender page, so these are decode-limited upper bounds, not real camera throughput. Real phone-to-phone has now been run once (see the Android row below); its throughput was not measured precisely.
 
 | Test | Result |
 |---|---|
@@ -36,6 +36,7 @@ All measured on one MacBook, headless Chromium, driven by Playwright, in October
 | PDF, PNG, vCard | complete, byte for byte equal, fingerprint equal |
 | 1 MB random file, QR L, 30 fps | single run: 70.9 s (about 14.4 KB/s), equal |
 | Loopback self-test, 100 KB | PASS, 8 to 9 s across runs (about 11 to 12 KB/s), headless Chromium on a Mac, synthetic canvas camera, Oct 2026 |
+| **Real phone-to-phone, two Android phones, Chrome, 25 Oct 2026** | An 86.0 KB PDF ("The Class of 2025 - Agenda.pdf") was received and the fingerprint appeared. The sender used laptop mode (large QR). Screenshots timestamped 06:47 (sender) and 06:49 (received), so it finished in about two minutes; exact seconds and device models were not recorded. Early on the receiver showed 0.5 decoded fps and its low-rate hint before it locked on. One run, not a benchmark. |
 | Offline after first load | home screen and loopback work with the network switched off |
 
 ## Run it
