@@ -11,11 +11,18 @@ export function pickScreen(go: (to: string) => void): Screen {
     state.outgoing = { bytes, meta: { name, mime } };
     const enc = new Encoder(bytes, { name, mime }, { chunkSize: SIZES.M });
     const fp = await fingerprint(bytes);
+    // Rough time at the recommended setting (QR M, 8 fps, about 85% of frames useful). Real cameras can be slower.
+    const seconds = Math.ceil(bytes.length / (SIZES.M * 8 * 0.85));
+    const eta = seconds < 90 ? `about ${seconds} s` : `about ${Math.round(seconds / 60)} min`;
     info.replaceChildren(
       h('div', { class: 'row' }, h('span', {}, 'Name'), h('b', {}, name)),
       h('div', { class: 'row' }, h('span', {}, 'Size'), h('b', {}, fmtSize(bytes.length))),
       h('div', { class: 'row' }, h('span', {}, 'Chunks (K)'), h('b', {}, String(enc.K))),
-      h('div', { class: 'row' }, h('span', {}, 'Fingerprint'), h('b', { class: 'fp' }, fp))
+      h('div', { class: 'row' }, h('span', {}, 'Estimated time'), h('b', {}, eta)),
+      h('div', { class: 'row' }, h('span', {}, 'Fingerprint'), h('b', { class: 'fp' }, fp)),
+      ...(bytes.length > 300 * 1024
+        ? [h('p', { class: 'note warn', role: 'alert' }, `This is a large file: ${eta} at the recommended setting, and the receiver has to keep the camera steady the whole time. Files under 150 KB take under a minute.`)]
+        : [])
     );
     (start as HTMLButtonElement).disabled = false;
   }

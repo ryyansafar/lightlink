@@ -40,3 +40,5 @@ input[type=text], input[type=tel], input[type=email], select { width:100%; backg
 .fail { display:flex; flex-direction:column; gap:12px; background:var(--card); border:1px solid #ff5252; border-radius:14px; padding:16px; font-size:1.1rem; }
 .fail p { margin:0; color:var(--mut); }
 select { min-height:48px; }
+
+.note.warn { color:#ffd166; }
