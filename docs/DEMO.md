@@ -5,7 +5,7 @@
 - [ ] Both phones: open the LightLink URL once on Wi-Fi. Home screen must show the green "Ready offline" badge. Add to home screen if you like.
 - [ ] Both phones: screen brightness at maximum, auto-lock off, camera permission granted to the site (open Receive once and allow).
 - [ ] Phone A (sender): a small PDF (under 100 KB) in Files/Downloads.
-- [ ] Laptop: LightLink open, a 300 to 500 KB file ready, browser zoom 100 percent, brightness max.
+- [ ] Laptop: LightLink open, a 100 to 150 KB file ready, browser zoom 100 percent, brightness max.
 - [ ] Phone B (receiver): a contact saved that you can send back as a card (or use "Make contact card" in the app).
 - [ ] Run the Loopback self-test on each phone: must say PASS.
 - [ ] Wipe the screens (no notifications, Do Not Disturb on). Clean the camera lenses.
@@ -29,7 +29,7 @@
 3. Uncover. It finishes.
 
 **1:50 Laptop sender, bigger file.**
-1. Laptop: Send, choose the 300 to 500 KB file, Laptop mode (QR fills the window), choose QR L and a higher fps if the room is dark.
+1. Laptop: Send, choose the 100 to 150 KB file, Laptop mode (QR fills the window), set QR M and 15 fps. Narrate the elapsed time while it runs.
 2. Phone B receives it. Quote the measured rate honestly: this takes tens of seconds, not instant. Say what the screen says.
 
 **2:30 vCard back.**
