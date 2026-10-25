@@ -1,4 +1,5 @@
 import { crc32 } from '../codec/crc32';
+import { fillAfterJson, jsonPart } from '../codec/frame';
 
 export const T_BIGMANIFEST = 0x10;
 export const T_TEST = 0x11;
@@ -31,11 +32,13 @@ function unseal(frame: Uint8Array): Uint8Array | null {
   return dv.getUint32(frame.length - 4) === crc32(body) ? body : null;
 }
 
-export function packBigManifest(m: BigManifest): Uint8Array {
+/** `padTo` makes the frame as long as a data frame (a NUL then filler), so its QR looks like every other tile. */
+export function packBigManifest(m: BigManifest, padTo = 0): Uint8Array {
   const json = new TextEncoder().encode(JSON.stringify(m));
-  const body = new Uint8Array(1 + json.length);
+  const body = new Uint8Array(Math.max(1 + json.length, padTo - 4));
   body[0] = T_BIGMANIFEST;
   body.set(json, 1);
+  if (body.length > 1 + json.length) fillAfterJson(body, 1, json.length);
   return seal(body);
 }
 
@@ -44,7 +47,7 @@ export function parseBigManifest(frame: Uint8Array): BigManifest | null {
     if (frame[0] !== T_BIGMANIFEST) return null;
     const body = unseal(frame);
     if (!body) return null;
-    const m = JSON.parse(new TextDecoder().decode(body.subarray(1)));
+    const m = JSON.parse(new TextDecoder().decode(jsonPart(body.subarray(1))));
     const ok = m && m.v === 1 && Number.isInteger(m.g) && m.g >= 1 && Number.isInteger(m.gs) && m.gs > 0 &&
       Number.isInteger(m.size) && m.size >= 0 && Number.isInteger(m.osz) && typeof m.sha === 'string' &&
       typeof m.name === 'string' && typeof m.mime === 'string' && Number.isInteger(m.id);

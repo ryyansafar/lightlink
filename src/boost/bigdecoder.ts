@@ -19,7 +19,8 @@ export interface BigStatus {
 }
 export interface BigResult { blob: Blob; meta: { name: string; mime: string; size: number }; verified: boolean }
 
-const MAX_ACTIVE = 2;
+/** Partial generations kept while the sender carousel moves on. A receiver that drops frames needs several passes per generation, so two was too few. */
+const MAX_ACTIVE = 8;
 
 /** Routes frames to one small Decoder per generation, keeps finished generations as Blobs (and in the store). */
 export class BigDecoder {

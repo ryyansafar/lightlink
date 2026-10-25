@@ -1,7 +1,8 @@
 import { h, Screen } from '../ui/dom';
 import { BigEncoder } from './bigencoder';
 import { calibrationFrame } from './channels';
-import { composeFrame, composeTest } from './compose';
+import { composeTest } from './compose';
+import { FramePool } from './framepool';
 import { chunkSizeOf, profileById } from './profiles';
 import { big } from './bigstate';
 
@@ -22,8 +23,8 @@ export function bigFlashScreen(go: (to: string) => void): Screen {
   let alive = true;
   let calibrating = false;
   let enc: BigEncoder | null = null;
+  let pool: FramePool | null = null;
   let sent = 0;
-  const t0 = performance.now();
   let lastFrame = 0;
 
   const size = () => {
@@ -45,21 +46,29 @@ export function bigFlashScreen(go: (to: string) => void): Screen {
     }
     enc = await BigEncoder.create(out!.blob, out!.meta, { chunkSize: chunkSizeOf(p), tiling: [p.cols, p.rows, big.color ? 1 : 0] });
     strip.replaceChildren(...Array.from({ length: Math.min(enc.gens, 200) }, () => h('i', {})));
+    const [W, H] = size();
+    pool = new FramePool(enc, p, big.color, W, H);
+    const ctx = canvas.getContext('2d')!;
+    const shown: number[] = [];
     const tick = (t: number) => {
       if (!alive) return;
       requestAnimationFrame(tick);
-      if (calibrating || t - lastFrame < 1000 / p.fps) return;
+      if (calibrating || t - lastFrame < 1000 / p.fps - 2) return;
+      const f = pool!.take();
+      if (!f?.bitmap) return; // not ready yet: try again on the next animation frame
       lastFrame = t;
-      const [W, H] = size();
-      canvas.getContext('2d')!.putImageData(composeFrame(enc!, p, big.color, W, H), 0, 0);
+      ctx.drawImage(f.bitmap, 0, 0);
+      f.bitmap.close();
       sent++;
-      const secs = (performance.now() - t0) / 1000;
+      shown.push(t);
+      while (shown.length && t - shown[0] > 2000) shown.shift();
       const cur = enc!.currentGen;
-      stat.textContent = `gen ${cur + 1}/${enc!.gens}, pass ${enc!.pass + 1} | ${sent} frames, drawn ${(sent / secs).toFixed(1)} fps (target ${p.fps})`;
+      const fps = shown.length > 1 ? ((shown.length - 1) * 1000) / (t - shown[0]) : 0;
+      stat.textContent = `gen ${cur + 1}/${enc!.gens}, pass ${enc!.pass + 1} | ${sent} frames, shown ${fps.toFixed(1)} fps (target ${p.fps}) | ${pool!.size} workers, ${pool!.avgGenMs.toFixed(0)} ms/frame each, ${pool!.underruns} late`;
       [...strip.children].forEach((c, i) => ((c as HTMLElement).className = i === cur % 200 ? 'on' : ''));
     };
     requestAnimationFrame(tick);
   }
   void run();
-  return { el: root, destroy: () => { alive = false; } };
+  return { el: root, destroy: () => { alive = false; pool?.close(); } };
 }

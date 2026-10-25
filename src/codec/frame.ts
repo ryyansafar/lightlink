@@ -44,10 +44,27 @@ export function packData(h: Header, seed: number, payload: Uint8Array): Uint8Arr
   return seal(buf);
 }
 
-export function packManifest(h: Header, m: Manifest): Uint8Array {
+/** Pseudo-random filler after a NUL, so a padded frame has the dense look of a data frame (long runs of one byte hurt some QR readers). */
+export function fillAfterJson(buf: Uint8Array, from: number, jsonLen: number): void {
+  let x = 0x2545f491;
+  for (let i = from + jsonLen; i < buf.length; i++) {
+    x = (Math.imul(x, 1664525) + 1013904223) >>> 0;
+    buf[i] = i === from + jsonLen ? 0 : x >>> 24;
+  }
+}
+
+/** The JSON part of a body: everything up to the first NUL (plain unpadded manifests have no NUL). */
+export function jsonPart(body: Uint8Array): Uint8Array {
+  const z = body.indexOf(0);
+  return z < 0 ? body : body.subarray(0, z);
+}
+
+/** `padTo` (optional) pads the frame to a full data-frame length. */
+export function packManifest(h: Header, m: Manifest, padTo = 0): Uint8Array {
   const json = new TextEncoder().encode(JSON.stringify(m));
-  const { buf } = head(T_MANIFEST, h, json.length);
+  const { buf } = head(T_MANIFEST, h, Math.max(json.length, padTo - HEAD - 4));
   buf.set(json, HEAD);
+  if (buf.length > HEAD + json.length) fillAfterJson(buf, HEAD, json.length);
   return seal(buf);
 }
 
@@ -73,7 +90,7 @@ export function parse(frame: Uint8Array): Parsed | null {
       return { type: 'data', h, seed: dv.getUint32(HEAD), payload: body.subarray(HEAD + 4) };
     }
     if (frame[0] === T_MANIFEST) {
-      const m = JSON.parse(new TextDecoder().decode(body.subarray(HEAD)));
+      const m = JSON.parse(new TextDecoder().decode(jsonPart(body.subarray(HEAD))));
       if (typeof m.name !== 'string' || typeof m.mime !== 'string' || typeof m.sha256 !== 'string') return null;
       return { type: 'manifest', h, m };
     }

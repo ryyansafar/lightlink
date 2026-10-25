@@ -4,7 +4,7 @@ import { packBigManifest, type BigManifest } from './bigframe';
 import { GEN_SIZE, genCount, genRange, genXferId } from './generations';
 import { hashBlob } from './sha256stream';
 
-export const BIG_MANIFEST_EVERY = 24;
+export const BIG_MANIFEST_EVERY = 25; // coprime with 2, 3, 6 and 18 frames per display frame, so the manifest rotates through every tile slot
 export const OVERHEAD = 1.25;
 
 export interface BigMeta { name: string; mime: string; origSize: number; compressed: boolean }
@@ -47,7 +47,7 @@ export class BigEncoder {
   private async load(g: number): Promise<Cur> {
     const [a, b] = genRange(g, this.blob.size, this.genSize);
     const bytes = new Uint8Array(await this.blob.slice(a, b).arrayBuffer());
-    const enc = new Encoder(bytes, this.metaBase, { chunkSize: this.chunkSize, xferId: genXferId(this.manifest.id, g), seedOffset: this.dataSent[g] });
+    const enc = new Encoder(bytes, this.metaBase, { chunkSize: this.chunkSize, xferId: genXferId(this.manifest.id, g), seedOffset: this.dataSent[g], padManifestTo: this.chunkSize + 21 });
     return { g, enc, used: 0, budget: Math.ceil(enc.K * OVERHEAD) + 4 };
   }
 
@@ -63,7 +63,7 @@ export class BigEncoder {
   }
 
   nextFrame(): Uint8Array {
-    if (this.frameNo++ % BIG_MANIFEST_EVERY === 0) return packBigManifest(this.manifest);
+    if (this.frameNo++ % BIG_MANIFEST_EVERY === 0) return packBigManifest(this.manifest, this.chunkSize + 21);
     const c = this.cur;
     const f = c.enc.nextFrame();
     c.used++;

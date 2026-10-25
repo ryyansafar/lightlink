@@ -1,5 +1,6 @@
 import { h, fmtSize, topBar, Screen } from '../ui/dom';
 import { BigReceiver } from './bigreceiver';
+import type { BigDecoder } from './bigdecoder';
 import { fitCalibration, sampleQuadrants } from './channels';
 import { PROFILES, profileById } from './profiles';
 import { big } from './bigstate';
@@ -38,22 +39,9 @@ export function bigScanScreen(go: (to: string) => void): Screen {
   }
   dsel.addEventListener('change', () => void setReader());
 
-  async function loop() {
-    if (!alive || !rx) return;
-    if (!rx.busy && video.videoWidth) {
-      const scale = Math.min(1, 1920 / video.videoWidth);
-      work.width = Math.round(video.videoWidth * scale);
-      work.height = Math.round(video.videoHeight * scale);
-      wctx.drawImage(video, 0, 0, work.width, work.height);
-      let img = wctx.getImageData(0, 0, work.width, work.height);
-      if (wantCal) {
-        wantCal = false;
-        cal = fitCalibration(sampleQuadrants(img.data, img.width, img.height));
-        verdict.textContent = cal ? 'Colour calibrated' : 'Calibration failed: show the patches full screen';
-      }
-      const pf = profileById(psel.value);
-      const s = await rx.feed(img, { cols: pf.cols, rows: pf.rows, color: big.color, cal: cal ?? undefined });
-      img = null as unknown as ImageData;
+  let finished = false;
+  function update(s: ReturnType<BigDecoder['status']>, pf: (typeof PROFILES)[number]) {
+    if (!rx || finished) return;
       if (testMode) {
         const t = rx.test;
         if (t) {
@@ -74,10 +62,31 @@ export function bigScanScreen(go: (to: string) => void): Screen {
         if (s.complete && rx.dec.result) {
           big.result = rx.dec.result;
           navigator.vibrate?.([80, 60, 80]);
+          finished = true;
           go('bigdone');
           return;
         }
       }
+  }
+
+  async function loop() {
+    if (!alive || !rx || finished) return;
+    if (!rx.busy && video.videoWidth) {
+      const scale = Math.min(1, 1920 / video.videoWidth);
+      work.width = Math.round(video.videoWidth * scale);
+      work.height = Math.round(video.videoHeight * scale);
+      wctx.drawImage(video, 0, 0, work.width, work.height);
+      let img = wctx.getImageData(0, 0, work.width, work.height);
+      if (wantCal) {
+        wantCal = false;
+        cal = fitCalibration(sampleQuadrants(img.data, img.width, img.height));
+        verdict.textContent = cal ? 'Colour calibrated' : 'Calibration failed: show the patches full screen';
+      }
+      const pf = profileById(psel.value);
+      const guessed = { cols: pf.cols, rows: pf.rows, color: big.color, cal: cal ?? undefined };
+      // Frames are decoded in parallel in the reader pool; a frame that finds every worker busy is dropped, never queued.
+      void rx.feed(img, guessed).then((s) => { if (alive) update(s, pf); });
+      img = null as unknown as ImageData;
     }
     requestAnimationFrame(() => void loop());
   }

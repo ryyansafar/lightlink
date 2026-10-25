@@ -1,6 +1,7 @@
 import { extractChannel, type Mat3 } from './channels';
-import { decodeText } from './text7';
+import { barcodeBytes, type Barcode } from './barcodebytes';
 import type { ScanRequest } from './boostscan.worker';
+import type { DecodeRequest } from './decode.worker';
 
 export interface ReadOpts { cols: number; rows: number; color: boolean; cal?: { black: number[]; inv: Mat3 } }
 export interface QrReader {
@@ -10,7 +11,6 @@ export interface QrReader {
   close(): void;
 }
 
-interface Barcode { rawValue: string; rawBytes?: Uint8Array }
 interface Detector { detect(src: ImageData): Promise<Barcode[]> }
 type DetectorCtor = (new (o: { formats: string[] }) => Detector) & { getSupportedFormats?: () => Promise<string[]> };
 
@@ -28,12 +28,7 @@ export async function nativeAvailable(): Promise<boolean> {
   }
 }
 
-/** Frame bytes of a detected code. The payload is text-safe (see text7.ts), so rawValue is enough. */
-export function barcodeBytes(b: Barcode): Uint8Array[] {
-  const chars = b.rawBytes?.length ? new Uint8Array(b.rawBytes) : Uint8Array.from(b.rawValue ?? '', (ch) => ch.charCodeAt(0) & 0xff);
-  const f = decodeText(chars);
-  return f ? [f] : [];
-}
+export { barcodeBytes };
 
 export class NativeReader implements QrReader {
   name = 'native' as const;
@@ -87,4 +82,74 @@ export class JsqrReader implements QrReader {
 export async function makeReader(kind: 'auto' | 'native' | 'jsqr'): Promise<QrReader> {
   if (kind !== 'jsqr' && (await nativeAvailable())) return new NativeReader();
   return new JsqrReader();
+}
+
+/**
+ * N decode workers. read() on a free worker starts at once; when every worker is busy the frame is dropped
+ * (resolves to []), never queued, so the newest camera frame is always the one that gets decoded next.
+ */
+export class PoolReader implements QrReader {
+  name: 'native' | 'jsqr';
+  private workers: { w: Worker; busy: boolean; cb?: (f: Uint8Array[]) => void }[] = [];
+  private nextId = 1;
+  reads = 0;
+  decodeMsTotal = 0;
+  dropped = 0;
+  constructor(kind: 'native' | 'jsqr', private n: number) {
+    this.name = kind;
+    for (let i = 0; i < n; i++) {
+      const w = new Worker(new URL('./decode.worker.ts', import.meta.url), { type: 'module' });
+      const slot: { w: Worker; busy: boolean; cb?: (f: Uint8Array[]) => void } = { w, busy: false };
+      w.onmessage = (e: MessageEvent<{ id: number; found: Uint8Array[]; ms: number }>) => {
+        slot.busy = false;
+        this.reads++;
+        this.decodeMsTotal += e.data.ms;
+        const cb = slot.cb;
+        slot.cb = undefined;
+        cb?.(e.data.found);
+      };
+      this.workers.push(slot);
+    }
+  }
+  get busy() { return this.workers.every((s) => s.busy); }
+  get size() { return this.n; }
+  get avgDecodeMs() { return this.reads ? this.decodeMsTotal / this.reads : 0; }
+  read(img: ImageData, o: ReadOpts): Promise<Uint8Array[]> {
+    const slot = this.workers.find((s) => !s.busy);
+    if (!slot) { this.dropped++; return Promise.resolve([]); }
+    slot.busy = true;
+    return new Promise((res) => {
+      slot.cb = res;
+      const req: DecodeRequest = { id: this.nextId++, kind: this.name, buf: img.data.buffer as ArrayBuffer, width: img.width, height: img.height, ...o };
+      slot.w.postMessage(req, [img.data.buffer]);
+    });
+  }
+  close() { this.workers.forEach((s) => s.w.terminate()); }
+}
+
+/** Reader workers for the receiver: enough to overlap decodes, but leave cores for the page and camera. */
+export function readerCount(): number {
+  const c = typeof navigator !== 'undefined' ? navigator.hardwareConcurrency || 2 : 2;
+  return Math.max(2, Math.min(4, c - 1));
+}
+
+/** Detect once whether BarcodeDetector works inside a worker in this browser. */
+export async function nativeWorkerOk(): Promise<boolean> {
+  if (!(await nativeAvailable())) return false;
+  try {
+    const r = new PoolReader('native', 1);
+    const px = new ImageData(64, 64);
+    px.data.fill(255);
+    await Promise.race([r.read(px, { cols: 1, rows: 1, color: false }), new Promise((_, rej) => setTimeout(() => rej(new Error('timeout')), 3000))]);
+    r.close();
+    return true;
+  } catch {
+    return false;
+  }
+}
+
+export async function makePoolReader(kind: 'auto' | 'native' | 'jsqr'): Promise<QrReader> {
+  const n = readerCount();
+  if (kind !== 'jsqr' && (await nativeWorkerOk())) return new PoolReader('native', n);
+  return new PoolReader('jsqr', n);
 }

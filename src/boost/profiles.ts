@@ -9,7 +9,11 @@ export interface Profile {
   cols: number;
   rows: number;
   note: string;
+  /** QR error-correction level. L maximises payload; see README for why it stays L. */
+  ec?: 'L' | 'M';
 }
+
+export const ecOf = (p: Profile): 'L' | 'M' => p.ec ?? 'L';
 
 /** Byte-mode, error-correction L capacities (bytes) of the QR versions used. */
 export const QR_CAPACITY: Record<number, number> = { 10: 271, 15: 520, 20: 858, 30: 1732, 36: 2431, 40: 2953 };

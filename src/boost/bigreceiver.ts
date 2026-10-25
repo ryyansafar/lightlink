@@ -1,7 +1,7 @@
 import { BigDecoder, type BigStatus } from './bigdecoder';
 import { parseTest } from './bigframe';
 import { IdbGenStore } from './genstore';
-import { makeReader, type QrReader, type ReadOpts } from './readers';
+import { makePoolReader, type QrReader, type ReadOpts } from './readers';
 import { ThroughputEstimator } from './throughput';
 
 export interface TestReading { profileIdx: number; color: boolean; tiles: number; layers: number }
@@ -23,7 +23,7 @@ export class BigReceiver {
   }
 
   async init(kind: 'auto' | 'native' | 'jsqr'): Promise<this> {
-    this.reader = await makeReader(kind);
+    this.reader = await makePoolReader(kind);
     return this;
   }
 
