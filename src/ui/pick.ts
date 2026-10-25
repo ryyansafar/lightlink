@@ -20,13 +20,25 @@ export function pickScreen(go: (to: string) => void): Screen {
     (start as HTMLButtonElement).disabled = false;
   }
 
+  const status = h('p', { class: 'note', role: 'status' });
+  // The real file input sits invisibly on top of the button, so a tap lands on the input itself.
+  // (A display:none input behind a label is unreliable on some phone browsers.)
   const file = h('input', {
     type: 'file',
     class: 'file',
+    'aria-label': 'Choose a file',
     onchange: async (e: Event) => {
-      const f = (e.target as HTMLInputElement).files?.[0];
+      const input = e.target as HTMLInputElement;
+      const f = input.files?.[0];
       if (!f) return;
-      await setOutgoing(new Uint8Array(await f.arrayBuffer()), f.name, f.type || 'application/octet-stream');
+      status.textContent = `Reading ${f.name}...`;
+      try {
+        await setOutgoing(new Uint8Array(await f.arrayBuffer()), f.name, f.type || 'application/octet-stream');
+        status.textContent = '';
+      } catch (err) {
+        status.textContent = `Could not read that file: ${err instanceof Error ? err.message : 'unknown error'}. Try a smaller file.`;
+      }
+      input.value = '';
     },
   });
   const name = h('input', { type: 'text', placeholder: 'Name', autocomplete: 'off' });
@@ -49,7 +61,8 @@ export function pickScreen(go: (to: string) => void): Screen {
     'div',
     { class: 'screen' },
     topBar('Send', () => go('home')),
-    h('label', { class: 'btn big alt' }, 'Choose a file', file),
+    h('div', { class: 'filewrap' }, h('div', { class: 'btn big alt' }, 'Choose a file'), file),
+    status,
     h('h3', {}, 'Or a contact card'),
     name, phone, email, makeCard,
     info,
